@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -98,7 +99,8 @@ private fun RowScope.CustomTab(
     ) {
         Text(
             text = screen.title,
-            color = if (currentRoute == screen.route) Color.Black else Color.Gray
+            color = if (currentRoute == screen.route) Color.Black else Color.Gray,
+            fontWeight = FontWeight.Bold
         )
     }
 }
