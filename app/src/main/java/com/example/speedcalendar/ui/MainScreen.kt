@@ -25,6 +25,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.speedcalendar.features.ai.AIScreen
+import com.example.speedcalendar.features.home.HomeScreen
+import com.example.speedcalendar.features.mine.MineScreen
 import com.example.speedcalendar.navigation.Screen
 
 @Composable
