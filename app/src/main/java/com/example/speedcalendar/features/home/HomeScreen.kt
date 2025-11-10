@@ -1,7 +1,10 @@
 package com.example.speedcalendar.features.home
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,9 +14,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -26,44 +28,105 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen() {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
-    var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) }
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+
+    val screenWidthPx = with(LocalDensity.current) {
+        LocalConfiguration.current.screenWidthDp.dp.toPx()
+    }
+    val offsetX = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+
+    fun animateMonthChange(isNext: Boolean) {
+        coroutineScope.launch {
+            val target = if (isNext) -screenWidthPx else screenWidthPx
+            offsetX.animateTo(target, animationSpec = tween(durationMillis = 300))
+            currentMonth = if (isNext) currentMonth.plusMonths(1) else currentMonth.minusMonths(1)
+            offsetX.snapTo(0f)
+        }
+    }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CalendarHeader(
             yearMonth = currentMonth,
-            onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
-            onNextMonth = { currentMonth = currentMonth.plusMonths(1) }
+            onPreviousMonth = { animateMonthChange(false) },
+            onNextMonth = { animateMonthChange(true) }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        CalendarView(
-            yearMonth = currentMonth,
-            selectedDate = selectedDate,
-            onDateSelected = { selectedDate = it }
-        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(currentMonth) { // 当月份改变时，重启手势检测
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            coroutineScope.launch { offsetX.snapTo(offsetX.value + dragAmount) }
+                        },
+                        onDragEnd = {
+                            coroutineScope.launch {
+                                val threshold = screenWidthPx / 4
+                                when {
+                                    offsetX.value < -threshold -> animateMonthChange(true)
+                                    offsetX.value > threshold -> animateMonthChange(false)
+                                    else -> offsetX.animateTo(0f, animationSpec = tween(200))
+                                }
+                            }
+                        }
+                    )
+                }
+        ) {
+            // 上一月视图
+            CalendarGrid(
+                modifier = Modifier.offset { IntOffset((-screenWidthPx + offsetX.value).roundToInt(), 0) },
+                yearMonth = currentMonth.minusMonths(1),
+                selectedDate = null,
+                onDateSelected = {}
+            )
+            // 当前月视图
+            CalendarGrid(
+                modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) },
+                yearMonth = currentMonth,
+                selectedDate = selectedDate,
+                onDateSelected = { selectedDate = it }
+            )
+            // 下一月视图
+            CalendarGrid(
+                modifier = Modifier.offset { IntOffset((screenWidthPx + offsetX.value).roundToInt(), 0) },
+                yearMonth = currentMonth.plusMonths(1),
+                selectedDate = null,
+                onDateSelected = {}
+            )
+        }
     }
 }
+
 
 @Composable
 fun CalendarHeader(
@@ -72,7 +135,9 @@ fun CalendarHeader(
     onNextMonth: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onPreviousMonth) {
@@ -91,21 +156,18 @@ fun CalendarHeader(
 }
 
 @Composable
-fun CalendarView(
+fun CalendarGrid(
+    modifier: Modifier = Modifier,
     yearMonth: YearMonth,
     selectedDate: LocalDate?,
     onDateSelected: (LocalDate) -> Unit
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
     val firstDayOfMonth = yearMonth.atDay(1)
-    // DayOfWeek: SUNDAY=7, MONDAY=1. `value % 7` 将周日映射为0，周一为1，以此类推。
     val paddingDays = firstDayOfMonth.dayOfWeek.value % 7
-
-    // 星期标题，从周日开始
     val daysOfWeek = remember { listOf("日", "一", "二", "三", "四", "五", "六") }
 
-    Column {
-        // 星期标题
+    Column(modifier = modifier.padding(horizontal = 16.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
             daysOfWeek.forEach { day ->
                 Text(
@@ -118,39 +180,40 @@ fun CalendarView(
         }
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 日历网格
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(7)
-        ) {
-            // 为月份的第一天之前添加空白单元格
-            items(count = paddingDays) {
-                Box(modifier = Modifier.aspectRatio(1f))
-            }
+        val totalCells = paddingDays + daysInMonth
+        val numRows = (totalCells + 6) / 7
+        repeat(numRows) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                repeat(7) { colIndex ->
+                    val dayIndex = (it * 7 + colIndex) - paddingDays
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                    ) {
+                        if (dayIndex >= 0 && dayIndex < daysInMonth) {
+                            val dayValue = dayIndex + 1
+                            val date = yearMonth.atDay(dayValue)
+                            val isSelected = selectedDate == date
 
-            // 添加日期单元格
-            items(count = daysInMonth) { dayIndex ->
-                val day = dayIndex + 1
-                val date = yearMonth.atDay(day)
-                val isSelected = selectedDate == date
-
-                Box(
-                    modifier = Modifier
-                        .aspectRatio(1f)
-                        .padding(2.dp)
-                        .clip(CircleShape)
-                        .background(
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null // 关键：将 indication 设置为 null 来移除涟漪效果
-                        ) { onDateSelected(date) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = day.toString(),
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground
-                    )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(2.dp)
+                                    .clip(CircleShape)
+                                    .background(color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                    .clickable(remember { MutableInteractionSource() }, indication = null) {
+                                        onDateSelected(date)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = dayValue.toString(),
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
