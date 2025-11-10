@@ -1,7 +1,10 @@
 package com.example.speedcalendar.features.home
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -66,115 +69,127 @@ fun HomeScreen() {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var showYearMonthPicker by remember { mutableStateOf(false) }
+    var showAddScheduleSheet by remember { mutableStateOf(false) }
 
-    if (showYearMonthPicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        )
-        DatePickerDialog(
-            onDismissRequest = { showYearMonthPicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showYearMonthPicker = false
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val newSelectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
-                            selectedDate = newSelectedDate
-                            currentMonth = YearMonth.from(newSelectedDate)
-                        }
-                    }
-                ) { Text("确定") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showYearMonthPicker = false }) { Text("取消") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* TODO: 处理点击事件 */ },
-                containerColor = MaterialTheme.colorScheme.primary,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "添加")
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End // 设置按钮在右下角
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            val screenWidthPx = with(LocalDensity.current) {
-                LocalConfiguration.current.screenWidthDp.dp.toPx()
-            }
-            val offsetX = remember { Animatable(0f) }
-            val coroutineScope = rememberCoroutineScope()
-
-            fun animateMonthChange(isNext: Boolean) {
-                coroutineScope.launch {
-                    val target = if (isNext) -screenWidthPx else screenWidthPx
-                    offsetX.animateTo(target, animationSpec = tween(durationMillis = 300))
-                    currentMonth = if (isNext) currentMonth.plusMonths(1) else currentMonth.minusMonths(1)
-                    offsetX.snapTo(0f)
-                }
-            }
-
-            CalendarHeader(
-                yearMonth = currentMonth,
-                onPreviousMonth = { animateMonthChange(false) },
-                onNextMonth = { animateMonthChange(true) },
-                onYearMonthClick = { showYearMonthPicker = true }
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (showYearMonthPicker) {
+            val datePickerState = rememberDatePickerState(
+                initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            DatePickerDialog(
+                onDismissRequest = { showYearMonthPicker = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showYearMonthPicker = false
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                val newSelectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                                selectedDate = newSelectedDate
+                                currentMonth = YearMonth.from(newSelectedDate)
+                            }
+                        }
+                    ) { Text("确定") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showYearMonthPicker = false }) { Text("取消") }
+                }
+            ) {
+                DatePicker(state = datePickerState)
+            }
+        }
 
-            Box(
+        Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { showAddScheduleSheet = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "添加")
+                }
+            },
+            floatingActionButtonPosition = FabPosition.End // 设置按钮在右下角
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .pointerInput(currentMonth) { // 当月份改变时，重启手势检测
-                        detectHorizontalDragGestures(
-                            onHorizontalDrag = { change, dragAmount ->
-                                change.consume()
-                                coroutineScope.launch { offsetX.snapTo(offsetX.value + dragAmount) }
-                            },
-                            onDragEnd = {
-                                coroutineScope.launch {
-                                    val threshold = screenWidthPx / 4
-                                    when {
-                                        offsetX.value < -threshold -> animateMonthChange(true)
-                                        offsetX.value > threshold -> animateMonthChange(false)
-                                        else -> offsetX.animateTo(0f, animationSpec = tween(200))
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                val screenWidthPx = with(LocalDensity.current) {
+                    LocalConfiguration.current.screenWidthDp.dp.toPx()
+                }
+                val offsetX = remember { Animatable(0f) }
+                val coroutineScope = rememberCoroutineScope()
+
+                fun animateMonthChange(isNext: Boolean) {
+                    coroutineScope.launch {
+                        val target = if (isNext) -screenWidthPx else screenWidthPx
+                        offsetX.animateTo(target, animationSpec = tween(durationMillis = 300))
+                        currentMonth = if (isNext) currentMonth.plusMonths(1) else currentMonth.minusMonths(1)
+                        offsetX.snapTo(0f)
+                    }
+                }
+
+                CalendarHeader(
+                    yearMonth = currentMonth,
+                    onPreviousMonth = { animateMonthChange(false) },
+                    onNextMonth = { animateMonthChange(true) },
+                    onYearMonthClick = { showYearMonthPicker = true }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(currentMonth) { // 当月份改变时，重启手势检测
+                            detectHorizontalDragGestures(
+                                onHorizontalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    coroutineScope.launch { offsetX.snapTo(offsetX.value + dragAmount) }
+                                },
+                                onDragEnd = {
+                                    coroutineScope.launch {
+                                        val threshold = screenWidthPx / 4
+                                        when {
+                                            offsetX.value < -threshold -> animateMonthChange(true)
+                                            offsetX.value > threshold -> animateMonthChange(false)
+                                            else -> offsetX.animateTo(0f, animationSpec = tween(200))
+                                        }
                                     }
                                 }
-                            }
-                        )
-                    }
-            ) {
-                CalendarGrid(
-                    modifier = Modifier.offset { IntOffset((-screenWidthPx + offsetX.value).roundToInt(), 0) },
-                    yearMonth = currentMonth.minusMonths(1),
-                    selectedDate = null,
-                    onDateSelected = {}
-                )
-                CalendarGrid(
-                    modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) },
-                    yearMonth = currentMonth,
-                    selectedDate = selectedDate,
-                    onDateSelected = { selectedDate = it }
-                )
-                CalendarGrid(
-                    modifier = Modifier.offset { IntOffset((screenWidthPx + offsetX.value).roundToInt(), 0) },
-                    yearMonth = currentMonth.plusMonths(1),
-                    selectedDate = null,
-                    onDateSelected = {}
-                )
+                            )
+                        }
+                ) {
+                    CalendarGrid(
+                        modifier = Modifier.offset { IntOffset((-screenWidthPx + offsetX.value).roundToInt(), 0) },
+                        yearMonth = currentMonth.minusMonths(1),
+                        selectedDate = null,
+                        onDateSelected = {}
+                    )
+                    CalendarGrid(
+                        modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) },
+                        yearMonth = currentMonth,
+                        selectedDate = selectedDate,
+                        onDateSelected = { selectedDate = it }
+                    )
+                    CalendarGrid(
+                        modifier = Modifier.offset { IntOffset((screenWidthPx + offsetX.value).roundToInt(), 0) },
+                        yearMonth = currentMonth.plusMonths(1),
+                        selectedDate = null,
+                        onDateSelected = {}
+                    )
+                }
             }
+        }
+
+        // 添加日程页面，带动画效果
+        AnimatedVisibility(
+            visible = showAddScheduleSheet,
+            enter = slideInHorizontally(initialOffsetX = { it }), // 从右侧滑入
+            exit = slideOutHorizontally(targetOffsetX = { it })  // 向右侧滑出
+        ) {
+            AddScheduleSheet(onClose = { showAddScheduleSheet = false })
         }
     }
 }
