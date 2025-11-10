@@ -20,10 +20,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,86 +52,129 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var showYearMonthPicker by remember { mutableStateOf(false) }
 
-    val screenWidthPx = with(LocalDensity.current) {
-        LocalConfiguration.current.screenWidthDp.dp.toPx()
-    }
-    val offsetX = remember { Animatable(0f) }
-    val coroutineScope = rememberCoroutineScope()
-
-    fun animateMonthChange(isNext: Boolean) {
-        coroutineScope.launch {
-            val target = if (isNext) -screenWidthPx else screenWidthPx
-            offsetX.animateTo(target, animationSpec = tween(durationMillis = 300))
-            currentMonth = if (isNext) currentMonth.plusMonths(1) else currentMonth.minusMonths(1)
-            offsetX.snapTo(0f)
+    if (showYearMonthPicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showYearMonthPicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showYearMonthPicker = false
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val newSelectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                            selectedDate = newSelectedDate
+                            currentMonth = YearMonth.from(newSelectedDate)
+                        }
+                    }
+                ) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showYearMonthPicker = false }) { Text("取消") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        CalendarHeader(
-            yearMonth = currentMonth,
-            onPreviousMonth = { animateMonthChange(false) },
-            onNextMonth = { animateMonthChange(true) }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Box(
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { /* TODO: 处理点击事件 */ },
+                containerColor = MaterialTheme.colorScheme.primary,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "添加")
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End // 设置按钮在右下角
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .pointerInput(currentMonth) { // 当月份改变时，重启手势检测
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            coroutineScope.launch { offsetX.snapTo(offsetX.value + dragAmount) }
-                        },
-                        onDragEnd = {
-                            coroutineScope.launch {
-                                val threshold = screenWidthPx / 4
-                                when {
-                                    offsetX.value < -threshold -> animateMonthChange(true)
-                                    offsetX.value > threshold -> animateMonthChange(false)
-                                    else -> offsetX.animateTo(0f, animationSpec = tween(200))
+                .fillMaxSize()
+                .padding(innerPadding),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val screenWidthPx = with(LocalDensity.current) {
+                LocalConfiguration.current.screenWidthDp.dp.toPx()
+            }
+            val offsetX = remember { Animatable(0f) }
+            val coroutineScope = rememberCoroutineScope()
+
+            fun animateMonthChange(isNext: Boolean) {
+                coroutineScope.launch {
+                    val target = if (isNext) -screenWidthPx else screenWidthPx
+                    offsetX.animateTo(target, animationSpec = tween(durationMillis = 300))
+                    currentMonth = if (isNext) currentMonth.plusMonths(1) else currentMonth.minusMonths(1)
+                    offsetX.snapTo(0f)
+                }
+            }
+
+            CalendarHeader(
+                yearMonth = currentMonth,
+                onPreviousMonth = { animateMonthChange(false) },
+                onNextMonth = { animateMonthChange(true) },
+                onYearMonthClick = { showYearMonthPicker = true }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(currentMonth) { // 当月份改变时，重启手势检测
+                        detectHorizontalDragGestures(
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                coroutineScope.launch { offsetX.snapTo(offsetX.value + dragAmount) }
+                            },
+                            onDragEnd = {
+                                coroutineScope.launch {
+                                    val threshold = screenWidthPx / 4
+                                    when {
+                                        offsetX.value < -threshold -> animateMonthChange(true)
+                                        offsetX.value > threshold -> animateMonthChange(false)
+                                        else -> offsetX.animateTo(0f, animationSpec = tween(200))
+                                    }
                                 }
                             }
-                        }
-                    )
-                }
-        ) {
-            // 上一月视图
-            CalendarGrid(
-                modifier = Modifier.offset { IntOffset((-screenWidthPx + offsetX.value).roundToInt(), 0) },
-                yearMonth = currentMonth.minusMonths(1),
-                selectedDate = null,
-                onDateSelected = {}
-            )
-            // 当前月视图
-            CalendarGrid(
-                modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) },
-                yearMonth = currentMonth,
-                selectedDate = selectedDate,
-                onDateSelected = { selectedDate = it }
-            )
-            // 下一月视图
-            CalendarGrid(
-                modifier = Modifier.offset { IntOffset((screenWidthPx + offsetX.value).roundToInt(), 0) },
-                yearMonth = currentMonth.plusMonths(1),
-                selectedDate = null,
-                onDateSelected = {}
-            )
+                        )
+                    }
+            ) {
+                CalendarGrid(
+                    modifier = Modifier.offset { IntOffset((-screenWidthPx + offsetX.value).roundToInt(), 0) },
+                    yearMonth = currentMonth.minusMonths(1),
+                    selectedDate = null,
+                    onDateSelected = {}
+                )
+                CalendarGrid(
+                    modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) },
+                    yearMonth = currentMonth,
+                    selectedDate = selectedDate,
+                    onDateSelected = { selectedDate = it }
+                )
+                CalendarGrid(
+                    modifier = Modifier.offset { IntOffset((screenWidthPx + offsetX.value).roundToInt(), 0) },
+                    yearMonth = currentMonth.plusMonths(1),
+                    selectedDate = null,
+                    onDateSelected = {}
+                )
+            }
         }
     }
 }
@@ -132,7 +184,8 @@ fun HomeScreen() {
 fun CalendarHeader(
     yearMonth: YearMonth,
     onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit
+    onNextMonth: () -> Unit,
+    onYearMonthClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -147,7 +200,13 @@ fun CalendarHeader(
             text = "${yearMonth.year}年 ${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.CHINESE)}",
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onYearMonthClick
+                )
         )
         IconButton(onClick = onNextMonth) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "下个月")
