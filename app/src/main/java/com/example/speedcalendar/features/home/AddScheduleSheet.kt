@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,7 +36,6 @@ import androidx.compose.ui.unit.sp
 fun AddScheduleSheet(onClose: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    // 在未来的步骤中，我们将为时间选择添加一个真实的时间选择器
     var time by remember { mutableStateOf("10:00") } // 时间占位符
 
     Column(
@@ -65,13 +65,21 @@ fun AddScheduleSheet(onClose: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // 为输入框定义统一的、无变化的颜色
+        val customTextFieldColors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.outline, // 获焦时边框颜色
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline, // 未获焦时边框颜色
+        )
+
         // 标题输入框
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
-            label = { Text("标题") },
+            placeholder = { Text("标题") }, // 使用 placeholder 代替 label
             leadingIcon = { Icon(Icons.Filled.Title, contentDescription = "标题") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            colors = customTextFieldColors // 应用自定义颜色
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -80,9 +88,11 @@ fun AddScheduleSheet(onClose: () -> Unit) {
         OutlinedTextField(
             value = location,
             onValueChange = { location = it },
-            label = { Text("地点") },
+            placeholder = { Text("地点") }, // 使用 placeholder 代替 label
             leadingIcon = { Icon(Icons.Filled.LocationOn, contentDescription = "地点") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            colors = customTextFieldColors // 应用自定义颜色
         )
 
         Spacer(modifier = Modifier.height(16.dp))
