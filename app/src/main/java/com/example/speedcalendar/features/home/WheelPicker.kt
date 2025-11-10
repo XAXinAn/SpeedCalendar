@@ -3,14 +3,15 @@ package com.example.speedcalendar.features.home
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,7 +41,8 @@ fun <T> WheelPicker(
     onItemSelected: (index: Int, item: T) -> Unit,
     modifier: Modifier = Modifier,
     initialIndex: Int = 0,
-    itemHeight: Dp = 36.dp
+    itemHeight: Dp = 36.dp,
+    textVerticalOffset: Dp = 0.dp // Corrected parameter
 ) {
     val state = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
     val itemHeightPx = with(LocalDensity.current) { itemHeight.toPx() }
@@ -53,46 +55,46 @@ fun <T> WheelPicker(
         }
     }
 
-    LaunchedEffect(centralItemIndex) {
-        val index = centralItemIndex % items.size
-        onItemSelected(index, items[index])
-    }
-
+    // **关键改动**：只在滚动停止时，才向外通知结果
     LaunchedEffect(state.isScrollInProgress) {
-        if (!state.isScrollInProgress && state.firstVisibleItemScrollOffset != 0) {
-            state.animateScrollToItem(centralItemIndex)
+        if (!state.isScrollInProgress) {
+            val finalIndex = centralItemIndex.coerceIn(0, items.size - 1)
+            onItemSelected(finalIndex, items[finalIndex])
+            state.animateScrollToItem(finalIndex) // 自动吸附到最近的选项
         }
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         LazyColumn(
             state = state,
-            modifier = Modifier.height(itemHeight * 5), // Show 5 items
+            modifier = Modifier.height(itemHeight * 5),
+            contentPadding = PaddingValues(vertical = itemHeight * 2),
             horizontalAlignment = Alignment.CenterHorizontally,
             flingBehavior = ScrollableDefaults.flingBehavior()
         ) {
-            items(count = Int.MAX_VALUE) { index ->
-                val itemIndex = index % items.size
+            items(count = items.size) { index ->
                 val isCentered = (index == centralItemIndex)
 
-                Text(
-                    text = items[itemIndex].toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (isCentered) MaterialTheme.colorScheme.primary else Color.Gray,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .height(itemHeight)
-                        .padding(vertical = 4.dp)
-                        .graphicsLayer {
-                            val scale = if (isCentered) 1.2f else 0.8f
-                            scaleX = scale
-                            scaleY = scale
-                        }
-                )
+                Box(
+                    modifier = Modifier.height(itemHeight),
+                    contentAlignment = Alignment.Center // Use simple Center alignment
+                ) {
+                    Text(
+                        text = items[index].toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (isCentered) MaterialTheme.colorScheme.primary else Color.Gray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .offset(y = textVerticalOffset) // Apply offset to the Text directly
+                            .graphicsLayer {
+                                val scale = if (isCentered) 1.2f else 0.8f
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                    )
+                }
             }
         }
-        HorizontalDivider(modifier = Modifier.align(Alignment.Center).padding(top = itemHeight / 2), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-        HorizontalDivider(modifier = Modifier.align(Alignment.Center).padding(bottom = itemHeight / 2), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
     }
 }
 
@@ -103,12 +105,10 @@ fun TimePickerDialog(
     initialHour: Int = 10,
     initialMinute: Int = 30
 ) {
-    val amPmItems = listOf("上午", "下午")
-    val hourItems = (1..12).toList()
+    val hourItems = (0..23).map { it.toString().padStart(2, '0') }
     val minuteItems = (0..59).map { it.toString().padStart(2, '0') }
 
-    var selectedAmPm by remember { mutableStateOf(if (initialHour < 12) "上午" else "下午") }
-    var selectedHour by remember { mutableIntStateOf(if (initialHour == 0 || initialHour == 12) 12 else initialHour % 12) }
+    var selectedHour by remember { mutableIntStateOf(initialHour) }
     var selectedMinute by remember { mutableIntStateOf(initialMinute) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -118,22 +118,18 @@ fun TimePickerDialog(
 
                 Row(modifier = Modifier.fillMaxWidth()) {
                     WheelPicker(
-                        items = amPmItems,
-                        onItemSelected = { _, item -> selectedAmPm = item },
-                        initialIndex = amPmItems.indexOf(selectedAmPm),
-                        modifier = Modifier.weight(1f)
-                    )
-                    WheelPicker(
                         items = hourItems,
-                        onItemSelected = { _, item -> selectedHour = item },
-                        initialIndex = hourItems.indexOf(selectedHour),
-                        modifier = Modifier.weight(1f)
+                        onItemSelected = { _, item -> selectedHour = item.toInt() },
+                        initialIndex = hourItems.indexOf(selectedHour.toString().padStart(2, '0')),
+                        modifier = Modifier.weight(1f),
+                        textVerticalOffset = 4.dp // Use the correct parameter
                     )
                     WheelPicker(
                         items = minuteItems,
                         onItemSelected = { _, item -> selectedMinute = item.toInt() },
                         initialIndex = minuteItems.indexOf(selectedMinute.toString().padStart(2, '0')),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        textVerticalOffset = 4.dp // Use the correct parameter
                     )
                 }
 
@@ -143,12 +139,7 @@ fun TimePickerDialog(
                     Spacer(modifier = Modifier.weight(1f))
                     TextButton(onClick = onDismiss) { Text("取消") }
                     TextButton(onClick = { 
-                        val finalHour = when {
-                            selectedAmPm == "下午" && selectedHour != 12 -> selectedHour + 12
-                            selectedAmPm == "上午" && selectedHour == 12 -> 0 // 12 AM is 00:00
-                            else -> selectedHour
-                        }
-                        onConfirm(finalHour, selectedMinute)
+                        onConfirm(selectedHour, selectedMinute)
                      }) { Text("确定") }
                 }
             }

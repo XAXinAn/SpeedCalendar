@@ -3,27 +3,34 @@ package com.example.speedcalendar.features.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -100,15 +107,31 @@ fun HomeScreen() {
 
         Scaffold(
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showAddScheduleSheet = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "添加")
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AnimatedVisibility(
+                        visible = currentMonth != YearMonth.now(),
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        FloatingActionButton(
+                            onClick = { currentMonth = YearMonth.now() },
+                            containerColor = MaterialTheme.colorScheme.surface, // 白色背景
+                            contentColor = MaterialTheme.colorScheme.primary, // 蓝色图标
+                            shape = CircleShape
+                        ) {
+                            Icon(Icons.Default.CalendarToday, contentDescription = "回到今天")
+                        }
+                    }
+                    FloatingActionButton(
+                        onClick = { showAddScheduleSheet = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "添加")
+                    }
                 }
             },
-            floatingActionButtonPosition = FabPosition.End // 设置按钮在右下角
+            floatingActionButtonPosition = FabPosition.End
         ) { innerPadding ->
             Column(
                 modifier = Modifier
@@ -142,7 +165,7 @@ fun HomeScreen() {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .pointerInput(currentMonth) { // 当月份改变时，重启手势检测
+                        .pointerInput(currentMonth) {
                             detectHorizontalDragGestures(
                                 onHorizontalDrag = { change, dragAmount ->
                                     change.consume()
@@ -151,10 +174,12 @@ fun HomeScreen() {
                                 onDragEnd = {
                                     coroutineScope.launch {
                                         val threshold = screenWidthPx / 4
-                                        when {
-                                            offsetX.value < -threshold -> animateMonthChange(true)
-                                            offsetX.value > threshold -> animateMonthChange(false)
-                                            else -> offsetX.animateTo(0f, animationSpec = tween(200))
+                                        if (offsetX.value < -threshold) {
+                                            animateMonthChange(true)
+                                        } else if (offsetX.value > threshold) {
+                                            animateMonthChange(false)
+                                        } else {
+                                            offsetX.animateTo(0f, animationSpec = tween(200))
                                         }
                                     }
                                 }
@@ -183,17 +208,15 @@ fun HomeScreen() {
             }
         }
 
-        // 添加日程页面，带动画效果
         AnimatedVisibility(
             visible = showAddScheduleSheet,
-            enter = slideInHorizontally(initialOffsetX = { it }), // 从右侧滑入
-            exit = slideOutHorizontally(targetOffsetX = { it })  // 向右侧滑出
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
         ) {
             AddScheduleSheet(onClose = { showAddScheduleSheet = false })
         }
     }
 }
-
 
 @Composable
 fun CalendarHeader(
@@ -205,6 +228,7 @@ fun CalendarHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(WindowInsets.statusBars.asPaddingValues())
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -217,11 +241,7 @@ fun CalendarHeader(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .weight(1f)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onYearMonthClick
-                )
+                .clickable(remember { MutableInteractionSource() }, null, onClick = onYearMonthClick)
         )
         IconButton(onClick = onNextMonth) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "下个月")
