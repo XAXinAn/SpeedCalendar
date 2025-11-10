@@ -36,7 +36,18 @@ import androidx.compose.ui.unit.sp
 fun AddScheduleSheet(onClose: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    var time by remember { mutableStateOf("10:00") } // 时间占位符
+    var time by remember { mutableStateOf("10:00") }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    if (showTimePicker) {
+        TimePickerDialog(
+            onDismiss = { showTimePicker = false },
+            onConfirm = { hour, minute ->
+                time = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
+                showTimePicker = false
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -65,21 +76,20 @@ fun AddScheduleSheet(onClose: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 为输入框定义统一的、无变化的颜色
         val customTextFieldColors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.outline, // 获焦时边框颜色
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline, // 未获焦时边框颜色
+            focusedBorderColor = MaterialTheme.colorScheme.outline,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
         )
 
         // 标题输入框
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
-            placeholder = { Text("标题") }, // 使用 placeholder 代替 label
+            placeholder = { Text("标题") },
             leadingIcon = { Icon(Icons.Filled.Title, contentDescription = "标题") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            colors = customTextFieldColors // 应用自定义颜色
+            colors = customTextFieldColors
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -88,11 +98,11 @@ fun AddScheduleSheet(onClose: () -> Unit) {
         OutlinedTextField(
             value = location,
             onValueChange = { location = it },
-            placeholder = { Text("地点") }, // 使用 placeholder 代替 label
+            placeholder = { Text("地点") },
             leadingIcon = { Icon(Icons.Filled.LocationOn, contentDescription = "地点") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            colors = customTextFieldColors // 应用自定义颜色
+            colors = customTextFieldColors
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -101,7 +111,7 @@ fun AddScheduleSheet(onClose: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { /* TODO: 打开时间选择器 */ }
+                .clickable { showTimePicker = true } // 点击这里打开时间选择器
                 .padding(vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
