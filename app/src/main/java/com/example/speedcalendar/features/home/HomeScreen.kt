@@ -36,6 +36,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -115,9 +116,10 @@ fun HomeScreen() {
                     ) {
                         FloatingActionButton(
                             onClick = { currentMonth = YearMonth.now() },
-                            containerColor = MaterialTheme.colorScheme.surface, // 白色背景
-                            contentColor = MaterialTheme.colorScheme.primary, // 蓝色图标
-                            shape = CircleShape
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape,
+                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp) // **关键改动**
                         ) {
                             Icon(Icons.Default.CalendarToday, contentDescription = "回到今天")
                         }
@@ -125,7 +127,8 @@ fun HomeScreen() {
                     FloatingActionButton(
                         onClick = { showAddScheduleSheet = true },
                         containerColor = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
+                        shape = CircleShape,
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp) // **关键改动**
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "添加")
                     }
@@ -228,7 +231,6 @@ fun CalendarHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(WindowInsets.statusBars.asPaddingValues())
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
