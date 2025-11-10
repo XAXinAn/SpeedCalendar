@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- 1. 设置启动屏背景颜色 -->
+        <item name="windowSplashScreenBackground">#FFFFFF</item>
+
+        <!-- 2. 设置启动屏图标 (请替换为你自己的图标) -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/speed_calendar_round</item>
+
+        <!-- 3. 设置启动屏之后的主题 -->
+        <item name="postSplashScreenTheme">@style/Theme.SpeedCalendar</item>
+    </style>
+</resources>
