@@ -1,7 +1,7 @@
 package com.example.speedcalendar.features.home
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,15 +16,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -48,7 +44,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,17 +54,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,7 +110,7 @@ fun HomeScreen() {
                             containerColor = MaterialTheme.colorScheme.surface,
                             contentColor = MaterialTheme.colorScheme.primary,
                             shape = CircleShape,
-                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp) // **关键改动**
+                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
                         ) {
                             Icon(Icons.Default.CalendarToday, contentDescription = "回到今天")
                         }
@@ -128,7 +119,7 @@ fun HomeScreen() {
                         onClick = { showAddScheduleSheet = true },
                         containerColor = MaterialTheme.colorScheme.primary,
                         shape = CircleShape,
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp) // **关键改动**
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "添加")
                     }
@@ -145,68 +136,48 @@ fun HomeScreen() {
                 val screenWidthPx = with(LocalDensity.current) {
                     LocalConfiguration.current.screenWidthDp.dp.toPx()
                 }
-                val offsetX = remember { Animatable(0f) }
-                val coroutineScope = rememberCoroutineScope()
-
-                fun animateMonthChange(isNext: Boolean) {
-                    coroutineScope.launch {
-                        val target = if (isNext) -screenWidthPx else screenWidthPx
-                        offsetX.animateTo(target, animationSpec = tween(durationMillis = 300))
-                        currentMonth = if (isNext) currentMonth.plusMonths(1) else currentMonth.minusMonths(1)
-                        offsetX.snapTo(0f)
-                    }
-                }
 
                 CalendarHeader(
                     yearMonth = currentMonth,
-                    onPreviousMonth = { animateMonthChange(false) },
-                    onNextMonth = { animateMonthChange(true) },
+                    onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
+                    onNextMonth = { currentMonth = currentMonth.plusMonths(1) },
                     onYearMonthClick = { showYearMonthPicker = true }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
+                var dragAmount by remember { mutableStateOf(0f) }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .pointerInput(currentMonth) {
+                        .pointerInput(Unit) {
                             detectHorizontalDragGestures(
-                                onHorizontalDrag = { change, dragAmount ->
-                                    change.consume()
-                                    coroutineScope.launch { offsetX.snapTo(offsetX.value + dragAmount) }
+                                onDragStart = { dragAmount = 0f },
+                                onHorizontalDrag = { _, horizontalDragAmount ->
+                                    dragAmount += horizontalDragAmount
                                 },
                                 onDragEnd = {
-                                    coroutineScope.launch {
-                                        val threshold = screenWidthPx / 4
-                                        if (offsetX.value < -threshold) {
-                                            animateMonthChange(true)
-                                        } else if (offsetX.value > threshold) {
-                                            animateMonthChange(false)
-                                        } else {
-                                            offsetX.animateTo(0f, animationSpec = tween(200))
-                                        }
+                                    val threshold = screenWidthPx / 5
+                                    if (dragAmount < -threshold) { // Swiped left
+                                        currentMonth = currentMonth.plusMonths(1)
+                                    } else if (dragAmount > threshold) { // Swiped right
+                                        currentMonth = currentMonth.minusMonths(1)
                                     }
                                 }
                             )
                         }
                 ) {
-                    CalendarGrid(
-                        modifier = Modifier.offset { IntOffset((-screenWidthPx + offsetX.value).roundToInt(), 0) },
-                        yearMonth = currentMonth.minusMonths(1),
-                        selectedDate = null,
-                        onDateSelected = {}
-                    )
-                    CalendarGrid(
-                        modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) },
-                        yearMonth = currentMonth,
-                        selectedDate = selectedDate,
-                        onDateSelected = { selectedDate = it }
-                    )
-                    CalendarGrid(
-                        modifier = Modifier.offset { IntOffset((screenWidthPx + offsetX.value).roundToInt(), 0) },
-                        yearMonth = currentMonth.plusMonths(1),
-                        selectedDate = null,
-                        onDateSelected = {}
-                    )
+                    Crossfade(
+                        targetState = currentMonth,
+                        animationSpec = tween(300),
+                        label = "CalendarCrossfade"
+                    ) { month ->
+                        CalendarGrid(
+                            yearMonth = month,
+                            selectedDate = selectedDate,
+                            onDateSelected = { selectedDate = it }
+                        )
+                    }
                 }
             }
         }
@@ -260,12 +231,11 @@ fun CalendarGrid(
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
     val firstDayOfMonth = yearMonth.atDay(1)
-    val paddingDays = firstDayOfMonth.dayOfWeek.value % 7
-    val daysOfWeek = remember { listOf("日", "一", "二", "三", "四", "五", "六") }
+    val paddingDays = firstDayOfMonth.dayOfWeek.value - 1
 
     Column(modifier = modifier.padding(horizontal = 16.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            daysOfWeek.forEach { day ->
+            listOf("一", "二", "三", "四", "五", "六", "日").forEach { day ->
                 Text(
                     text = day,
                     modifier = Modifier.weight(1f),
