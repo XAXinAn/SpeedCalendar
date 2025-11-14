@@ -1,12 +1,12 @@
 package com.example.speedcalendar.features.home
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -167,10 +167,16 @@ fun HomeScreen() {
                             )
                         }
                 ) {
-                    Crossfade(
+                    AnimatedContent(
                         targetState = currentMonth,
-                        animationSpec = tween(300),
-                        label = "CalendarCrossfade"
+                        transitionSpec = {
+                            if (targetState > initialState) {
+                                slideInHorizontally { it } togetherWith slideOutHorizontally { -it }
+                            } else {
+                                slideInHorizontally { -it } togetherWith slideOutHorizontally { it }
+                            }
+                        },
+                        label = "CalendarAnimation"
                     ) { month ->
                         CalendarGrid(
                             yearMonth = month,
