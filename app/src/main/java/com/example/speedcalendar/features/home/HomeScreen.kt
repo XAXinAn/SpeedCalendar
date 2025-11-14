@@ -235,9 +235,11 @@ fun CalendarGrid(
     selectedDate: LocalDate?,
     onDateSelected: (LocalDate) -> Unit
 ) {
-    val daysInMonth = yearMonth.lengthOfMonth()
     val firstDayOfMonth = yearMonth.atDay(1)
-    val paddingDays = firstDayOfMonth.dayOfWeek.value - 1
+    val paddingDays = (firstDayOfMonth.dayOfWeek.value - 1) // Monday is 1, Sunday is 7
+
+    val startDate = firstDayOfMonth.minusDays(paddingDays.toLong())
+    val numRows = 6 // Always display up to 6 rows
 
     Column(modifier = modifier.padding(horizontal = 16.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -252,20 +254,22 @@ fun CalendarGrid(
         }
         Spacer(modifier = Modifier.height(8.dp))
 
-        val totalCells = paddingDays + daysInMonth
-        val numRows = (totalCells + 6) / 7
-        repeat(numRows) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                repeat(7) { colIndex ->
-                    val dayIndex = (it * 7 + colIndex) - paddingDays
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(1f)
-                    ) {
-                        if (dayIndex >= 0 && dayIndex < daysInMonth) {
-                            val dayValue = dayIndex + 1
-                            val date = yearMonth.atDay(dayValue)
+        repeat(numRows) { weekIndex ->
+            val weekDates = (0..6).map {
+                startDate.plusDays((weekIndex * 7 + it).toLong())
+            }
+            val showRow = weekDates.any { YearMonth.from(it) == yearMonth }
+
+            if (showRow) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    weekDates.forEach { date ->
+                        val isCurrentMonth = YearMonth.from(date) == yearMonth
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                        ) {
                             val isSelected = selectedDate == date
                             val isToday = date == LocalDate.now()
 
@@ -274,20 +278,22 @@ fun CalendarGrid(
                                     .fillMaxSize()
                                     .padding(2.dp)
                                     .clip(CircleShape)
-                                    .background(color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                    .clickable(remember { MutableInteractionSource() }, indication = null) {
-                                        onDateSelected(date)
-                                    },
+                                    .background(color = if (isSelected && isCurrentMonth) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                    .clickable(
+                                        enabled = isCurrentMonth,
+                                        onClick = { onDateSelected(date) },
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = dayValue.toString(),
-                                    color = if (isSelected) {
-                                        MaterialTheme.colorScheme.onPrimary
-                                    } else if (isToday) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onBackground
+                                    text = date.dayOfMonth.toString(),
+                                    color = when {
+                                        isSelected && isCurrentMonth -> MaterialTheme.colorScheme.onPrimary
+                                        isToday && isCurrentMonth -> MaterialTheme.colorScheme.primary
+                                        isCurrentMonth -> MaterialTheme.colorScheme.onBackground
+                                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                     }
                                 )
                             }
