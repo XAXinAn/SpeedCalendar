@@ -101,12 +101,15 @@ fun HomeScreen() {
             floatingActionButton = {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AnimatedVisibility(
-                        visible = currentMonth != YearMonth.now(),
+                        visible = currentMonth != YearMonth.now() || selectedDate != LocalDate.now(),
                         enter = fadeIn(),
                         exit = fadeOut()
                     ) {
                         FloatingActionButton(
-                            onClick = { currentMonth = YearMonth.now() },
+                            onClick = {
+                                currentMonth = YearMonth.now()
+                                selectedDate = LocalDate.now()
+                            },
                             containerColor = MaterialTheme.colorScheme.surface,
                             contentColor = MaterialTheme.colorScheme.primary,
                             shape = CircleShape,
