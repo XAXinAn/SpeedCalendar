@@ -2,6 +2,8 @@ package com.example.speedcalendar.features.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,17 +14,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Title
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,16 +42,25 @@ import androidx.compose.ui.unit.sp
 fun AddScheduleSheet(onClose: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    var time by remember { mutableStateOf("10:00") }
+    var time by remember { mutableStateOf<String?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
 
     if (showTimePicker) {
+        val (initialHour, initialMinute) = remember(time) {
+            if (time != null) {
+                time!!.split(':').map { it.toInt() }
+            } else {
+                listOf(12, 0)
+            }
+        }
         TimePickerDialog(
             onDismiss = { showTimePicker = false },
             onConfirm = { hour, minute ->
                 time = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
                 showTimePicker = false
-            }
+            },
+            initialHour = initialHour,
+            initialMinute = initialMinute
         )
     }
 
@@ -57,11 +69,11 @@ fun AddScheduleSheet(onClose: () -> Unit) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(WindowInsets.statusBars.asPaddingValues())
-            .padding(16.dp)
     ) {
-        // 顶部栏
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
@@ -78,53 +90,90 @@ fun AddScheduleSheet(onClose: () -> Unit) {
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        val customTextFieldColors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.outline,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-        )
-
-        // 标题输入框
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            placeholder = { Text("标题") },
-            leadingIcon = { Icon(Icons.Filled.Title, contentDescription = "标题") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            colors = customTextFieldColors
-        )
-
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 地点输入框
-        OutlinedTextField(
-            value = location,
-            onValueChange = { location = it },
-            placeholder = { Text("地点") },
-            leadingIcon = { Icon(Icons.Filled.LocationOn, contentDescription = "地点") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            colors = customTextFieldColors
-        )
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            InfoRow(
+                icon = Icons.Default.Title,
+                label = "标题"
+            ) {
+                BasicTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    decorationBox = { innerTextField ->
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                            if (title.isEmpty()) {
+                                Text("标题", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                            }
+                            innerTextField()
+                        }
+                    }
+                )
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // 时间选择行
+            InfoRow(
+                icon = Icons.Default.LocationOn,
+                label = "地点"
+            ) {
+                BasicTextField(
+                    value = location,
+                    onValueChange = { location = it },
+                    decorationBox = { innerTextField ->
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                            if (location.isEmpty()) {
+                                Text("地点", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                            }
+                            innerTextField()
+                        }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            InfoRow(
+                icon = Icons.Default.Schedule,
+                label = "时间"
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(remember { MutableInteractionSource() }, indication = null) { showTimePicker = true },
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (time == null) {
+                        Text("时间", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                    } else {
+                        Text(text = time!!)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(
+    icon: ImageVector,
+    label: String,
+    content: @Composable () -> Unit
+) {
+    Column {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showTimePicker = true } // 点击这里打开时间选择器
-                .padding(vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.height(48.dp)
         ) {
             Icon(
-                imageVector = Icons.Filled.Schedule,
-                contentDescription = "时间",
+                imageVector = icon,
+                contentDescription = label,
                 modifier = Modifier.padding(end = 16.dp)
             )
-            Text(text = time, style = MaterialTheme.typography.bodyLarge)
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                content()
+            }
         }
+        Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), modifier = Modifier.padding(start = 40.dp))
     }
 }

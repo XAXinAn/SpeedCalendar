@@ -27,8 +27,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -38,8 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,10 +51,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -72,29 +66,14 @@ fun HomeScreen() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (showYearMonthPicker) {
-            val datePickerState = rememberDatePickerState(
-                initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            )
-            DatePickerDialog(
-                onDismissRequest = { showYearMonthPicker = false },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showYearMonthPicker = false
-                            datePickerState.selectedDateMillis?.let { millis ->
-                                val newSelectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
-                                selectedDate = newSelectedDate
-                                currentMonth = YearMonth.from(newSelectedDate)
-                            }
-                        }
-                    ) { Text("确定") }
+            YearMonthPickerDialog(
+                onDismiss = { showYearMonthPicker = false },
+                onConfirm = { year, month ->
+                    currentMonth = YearMonth.of(year, month)
+                    showYearMonthPicker = false
                 },
-                dismissButton = {
-                    TextButton(onClick = { showYearMonthPicker = false }) { Text("取消") }
-                }
-            ) {
-                DatePicker(state = datePickerState)
-            }
+                initialYearMonth = currentMonth
+            )
         }
 
         Scaffold(
