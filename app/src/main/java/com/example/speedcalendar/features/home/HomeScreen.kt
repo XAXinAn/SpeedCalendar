@@ -261,6 +261,7 @@ fun CalendarGrid(
                             val dayValue = dayIndex + 1
                             val date = yearMonth.atDay(dayValue)
                             val isSelected = selectedDate == date
+                            val isToday = date == LocalDate.now()
 
                             Box(
                                 modifier = Modifier
@@ -275,7 +276,13 @@ fun CalendarGrid(
                             ) {
                                 Text(
                                     text = dayValue.toString(),
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else if (isToday) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onBackground
+                                    }
                                 )
                             }
                         }
