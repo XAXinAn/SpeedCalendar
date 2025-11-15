@@ -53,6 +53,16 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended") // 添加此行来引入扩展图标库
     implementation("androidx.navigation:navigation-compose:2.9.6")
     implementation("androidx.core:core-splashscreen:1.2.0")
+
+    // Retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+    // ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
+
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

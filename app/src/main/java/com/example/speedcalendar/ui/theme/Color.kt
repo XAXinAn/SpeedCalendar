@@ -2,13 +2,15 @@ package com.example.speedcalendar.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Custom Blue for the app theme
+val PrimaryBlue = Color(0xFF009AFE)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Light Theme Colors
+val Blue40 = PrimaryBlue // primary
+val BlueGrey40 = Color(0xFF566070) // secondary
+val LightBlue40 = Color(0xFF00497E) // tertiary
 
-// SpeedCalendar App Colors
-val AppPrimaryColor = Color(0xFF0099FD)
+// Dark Theme Colors
+val Blue80 = Color(0xFF79B8FF) // primary
+val BlueGrey80 = Color(0xFFB4C5E4) // secondary
+val LightBlue80 = Color(0xFFD2E3FF) // tertiary
