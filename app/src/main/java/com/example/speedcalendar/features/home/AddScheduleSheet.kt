@@ -21,7 +21,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Title
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,10 +33,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.speedcalendar.ui.theme.PrimaryBlue
 
 @Composable
 fun AddScheduleSheet(onClose: () -> Unit) {
@@ -67,7 +69,7 @@ fun AddScheduleSheet(onClose: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Color(0xFFF7F8FA)) // Consistent background
             .padding(WindowInsets.statusBars.asPaddingValues())
     ) {
         Row(
@@ -77,16 +79,17 @@ fun AddScheduleSheet(onClose: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(
                 text = "添加日程",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onBackground
             )
             IconButton(onClick = { /* TODO: 保存日程逻辑 */ }) {
-                Icon(Icons.Filled.Check, contentDescription = "保存")
+                Icon(Icons.Filled.Check, contentDescription = "保存", tint = PrimaryBlue) // Use Primary Blue for the main action
             }
         }
 
@@ -100,10 +103,11 @@ fun AddScheduleSheet(onClose: () -> Unit) {
                 BasicTextField(
                     value = title,
                     onValueChange = { title = it },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
                     decorationBox = { innerTextField ->
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
                             if (title.isEmpty()) {
-                                Text("标题", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                                Text("标题", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             innerTextField()
                         }
@@ -120,10 +124,11 @@ fun AddScheduleSheet(onClose: () -> Unit) {
                 BasicTextField(
                     value = location,
                     onValueChange = { location = it },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
                     decorationBox = { innerTextField ->
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
                             if (location.isEmpty()) {
-                                Text("地点", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                                Text("地点", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             innerTextField()
                         }
@@ -144,9 +149,9 @@ fun AddScheduleSheet(onClose: () -> Unit) {
                     contentAlignment = Alignment.CenterStart
                 ) {
                     if (time == null) {
-                        Text("时间", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                        Text("时间", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        Text(text = time!!)
+                        Text(text = time!!, color = MaterialTheme.colorScheme.onBackground)
                     }
                 }
             }
@@ -168,12 +173,13 @@ private fun InfoRow(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                modifier = Modifier.padding(end = 16.dp)
+                modifier = Modifier.padding(end = 16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant // Consistent icon tint
             )
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                 content()
             }
         }
-        Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), modifier = Modifier.padding(start = 40.dp))
+        HorizontalDivider(color = PrimaryBlue.copy(alpha = 0.2f), modifier = Modifier.padding(start = 40.dp))
     }
 }

@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.speedcalendar.ui.theme.PrimaryBlue
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -77,6 +78,7 @@ fun HomeScreen() {
         }
 
         Scaffold(
+            containerColor = Color(0xFFF7F8FA), // Consistent background color
             floatingActionButton = {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AnimatedVisibility(
@@ -89,7 +91,7 @@ fun HomeScreen() {
                                 currentMonth = YearMonth.now()
                                 selectedDate = LocalDate.now()
                             },
-                            containerColor = MaterialTheme.colorScheme.surface,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant, // A lighter color for secondary action
                             contentColor = MaterialTheme.colorScheme.primary,
                             shape = CircleShape,
                             elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
@@ -99,7 +101,8 @@ fun HomeScreen() {
                     }
                     FloatingActionButton(
                         onClick = { showAddScheduleSheet = true },
-                        containerColor = MaterialTheme.colorScheme.primary,
+                        containerColor = PrimaryBlue, // Use the primary blue
+                        contentColor = Color.White,
                         shape = CircleShape,
                         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
                     ) {
@@ -260,7 +263,7 @@ fun CalendarGrid(
                                     .fillMaxSize()
                                     .padding(2.dp)
                                     .clip(CircleShape)
-                                    .background(color = if (isSelected && isCurrentMonth) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                    .background(color = if (isSelected && isCurrentMonth) PrimaryBlue else Color.Transparent)
                                     .clickable(
                                         enabled = isCurrentMonth,
                                         onClick = { onDateSelected(date) },
@@ -272,8 +275,8 @@ fun CalendarGrid(
                                 Text(
                                     text = date.dayOfMonth.toString(),
                                     color = when {
-                                        isSelected && isCurrentMonth -> MaterialTheme.colorScheme.onPrimary
-                                        isToday && isCurrentMonth -> MaterialTheme.colorScheme.primary
+                                        isSelected && isCurrentMonth -> Color.White
+                                        isToday && isCurrentMonth -> PrimaryBlue
                                         isCurrentMonth -> MaterialTheme.colorScheme.onBackground
                                         else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                     }

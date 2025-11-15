@@ -2,15 +2,29 @@ package com.example.speedcalendar.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Custom Blue for the app theme
-val PrimaryBlue = Color(0xFF009AFE)
+// --- Base Colors Defined by You ---
 
-// Light Theme Colors
-val Blue40 = PrimaryBlue // primary
-val BlueGrey40 = Color(0xFF566070) // secondary
-val LightBlue40 = Color(0xFF00497E) // tertiary
+// The primary blue color, as specified.
+val PrimaryBlue = Color(0xFF0099FD)
 
-// Dark Theme Colors
-val Blue80 = Color(0xFF79B8FF) // primary
-val BlueGrey80 = Color(0xFFB4C5E4) // secondary
-val LightBlue80 = Color(0xFFD2E3FF) // tertiary
+// A lighter blue for prominent containers like the main icon background.
+val LightBlueContainer = Color(0xFFD0E4FF)
+
+// A very light blue for larger surfaces like cards.
+val LightBlueSurface = Color(0xFFF0F8FF)
+
+// A dark blue for text/icons on top of the light blue container.
+val OnLightBlueContainer = Color(0xFF001D36)
+
+
+// --- Standard Theme Colors (Generated for Material Theme) ---
+
+// For Light Theme
+val Blue40 = PrimaryBlue
+val BlueGrey40 = Color(0xFF566070)
+val LightBlue40 = Color(0xFF00497E)
+
+// For Dark Theme
+val Blue80 = Color(0xFF8BC4FF)
+val BlueGrey80 = Color(0xFFB4C5E4)
+val LightBlue80 = Color(0xFFD2E3FF)
