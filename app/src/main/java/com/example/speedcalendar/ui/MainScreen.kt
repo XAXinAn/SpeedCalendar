@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,11 +33,17 @@ import androidx.navigation.compose.rememberNavController
 import com.example.speedcalendar.features.ai.AIScreen
 import com.example.speedcalendar.features.home.HomeScreen
 import com.example.speedcalendar.features.mine.MineScreen
+import com.example.speedcalendar.features.mine.settings.PersonalSettingsScreen
+import com.example.speedcalendar.features.mine.settings.EditProfileScreen
 import com.example.speedcalendar.navigation.Screen
+import com.example.speedcalendar.viewmodel.AuthViewModel
 
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
+    // 在 MainScreen 级别创建共享的 AuthViewModel
+    val authViewModel: AuthViewModel = viewModel()
+
     Scaffold(
         bottomBar = {
             BottomNavigationBar {
@@ -74,7 +81,29 @@ fun MainScreen() {
         ) {
             composable(Screen.Home.route) { HomeScreen() }
             composable(Screen.AI.route) { AIScreen() }
-            composable(Screen.Mine.route) { MineScreen() }
+            composable(Screen.Mine.route) {
+                MineScreen(
+                    onNavigateToPersonalSettings = {
+                        navController.navigate(Screen.PersonalSettings.route)
+                    },
+                    viewModel = authViewModel // 传递共享的 ViewModel
+                )
+            }
+            composable(Screen.PersonalSettings.route) {
+                PersonalSettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onEditProfile = {
+                        navController.navigate(Screen.EditProfile.route)
+                    },
+                    viewModel = authViewModel // 传递共享的 ViewModel
+                )
+            }
+            composable(Screen.EditProfile.route) {
+                EditProfileScreen(
+                    onBack = { navController.popBackStack() },
+                    viewModel = authViewModel // 传递共享的 ViewModel
+                )
+            }
         }
     }
 }

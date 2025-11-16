@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,14 +41,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.speedcalendar.ui.theme.LightBlueContainer
 import com.example.speedcalendar.ui.theme.LightBlueSurface
 import com.example.speedcalendar.ui.theme.OnLightBlueContainer
 import com.example.speedcalendar.ui.theme.PrimaryBlue
+import com.example.speedcalendar.viewmodel.AuthViewModel
 
 @Composable
-fun MineScreen() {
+fun MineScreen(
+    onNavigateToPersonalSettings: () -> Unit = {},
+    onNavigateToGroupSettings: () -> Unit = {},
+    viewModel: AuthViewModel = viewModel()
+) {
     var showLoginSheet by remember { mutableStateOf(false) }
+
+    // 监听登录状态
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    val userInfo by viewModel.userInfo.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -58,37 +69,69 @@ fun MineScreen() {
         ) {
             Spacer(modifier = Modifier.height(60.dp))
 
-            // Login Prompt Section
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null // This line removes the ripple effect
-                ) { showLoginSheet = true }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Login",
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(LightBlueContainer) // Use the defined light blue
-                        .padding(16.dp),
-                    tint = OnLightBlueContainer // Use the defined dark blue for contrast
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "立即登录",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "登录体验更多功能",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            // User Profile Section - 根据登录状态显示不同内容
+            if (isLoggedIn && userInfo != null) {
+                // 已登录：显示用户信息
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "用户头像",
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryBlue)
+                            .padding(16.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = userInfo!!.username ?: "用户",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = userInfo!!.phone ?: "",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                // 未登录：显示登录提示
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { showLoginSheet = true }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Login",
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(LightBlueContainer)
+                            .padding(16.dp),
+                        tint = OnLightBlueContainer
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "立即登录",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "登录体验更多功能",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -103,9 +146,15 @@ fun MineScreen() {
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column {
-                    SettingsItem(title = "群体设置")
+                    SettingsItem(
+                        title = "群体设置",
+                        onClick = onNavigateToGroupSettings
+                    )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = PrimaryBlue.copy(alpha = 0.1f))
-                    SettingsItem(title = "个人设置")
+                    SettingsItem(
+                        title = "个人设置",
+                        onClick = onNavigateToPersonalSettings
+                    )
                 }
             }
 
@@ -133,7 +182,10 @@ fun MineScreen() {
             enter = slideInHorizontally(initialOffsetX = { it }),
             exit = slideOutHorizontally(targetOffsetX = { it })
         ) {
-            LoginSheet(onClose = { showLoginSheet = false })
+            LoginSheet(
+                onClose = { showLoginSheet = false },
+                viewModel = viewModel
+            )
         }
     }
 }
