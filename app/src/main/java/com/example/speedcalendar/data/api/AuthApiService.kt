@@ -5,6 +5,8 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
 
 /**
  * 认证API服务
@@ -24,6 +26,16 @@ interface AuthApiService {
      */
     @POST("auth/login/phone")
     suspend fun phoneLogin(@Body request: PhoneLoginRequest): Response<ApiResponse<LoginResponse>>
+
+    /**
+     * 更新用户信息
+     * PUT /api/auth/user/{userId}
+     */
+    @PUT("auth/user/{userId}")
+    suspend fun updateUserInfo(
+        @Path("userId") userId: String,
+        @Body request: UpdateUserInfoRequest
+    ): Response<ApiResponse<UserInfo>>
 
     /**
      * 健康检查

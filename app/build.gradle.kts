@@ -60,6 +60,12 @@ dependencies {
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
 
+    // Coil 图片加载
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // DataStore (用于缓存)
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

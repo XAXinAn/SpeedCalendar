@@ -1,6 +1,10 @@
 package com.example.speedcalendar.features.mine.settings
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -16,31 +20,113 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.example.speedcalendar.ui.theme.LightBlueSurface
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 import com.example.speedcalendar.viewmodel.AuthViewModel
+import com.example.speedcalendar.viewmodel.AvatarViewModel
 
 /**
  * 编辑资料页面
+ *
+ * TODO: 添加数据刷新机制
+ * 当前问题：
+ * 1. 页面打开时不刷新：只显示本地缓存数据，可能过期
+ * 2. 无手动刷新：用户无法主动拉取最新数据
+ * 3. 多设备不同步：其他设备修改后，当前设备看不到更新
+ *
+ * 改进建议：
+ * 方案1：进入页面时自动刷新
+ *   LaunchedEffect(Unit) {
+ *       userInfo?.userId?.let { userId ->
+ *           viewModel.fetchUserInfoFromServer(userId) // 需要添加此方法
+ *       }
+ *   }
+ *
+ * 方案2：下拉刷新
+ *   - 使用 SwipeRefresh 或 PullRefreshIndicator
+ *   - 用户下拉时重新获取数据
+ *   - 提供明确的刷新反馈
+ *
+ * 方案3：定时刷新
+ *   - 每次从后台切到前台时刷新
+ *   - 使用 Lifecycle 监听应用状态
+ *
+ * 示例实现：
+ * ```kotlin
+ * val pullRefreshState = rememberPullRefreshState(
+ *     refreshing = isRefreshing,
+ *     onRefresh = {
+ *         userInfo?.userId?.let { viewModel.fetchUserInfoFromServer(it) }
+ *     }
+ * )
+ * Box(Modifier.pullRefresh(pullRefreshState)) {
+ *     // 现有内容
+ *     PullRefreshIndicator(isRefreshing, pullRefreshState)
+ * }
+ * ```
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onBack: () -> Unit,
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel = viewModel(),
+    avatarViewModel: AvatarViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val userInfo by viewModel.userInfo.collectAsState()
+    val isUploading by avatarViewModel.isUploading.collectAsState()
+    val uploadProgress by avatarViewModel.uploadProgress.collectAsState()
+    val errorMessage by avatarViewModel.errorMessage.collectAsState()
+    val successMessage by avatarViewModel.successMessage.collectAsState()
 
     var nickname by remember { mutableStateOf(userInfo?.username ?: "") }
     var showNicknameDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // 图片选择器
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val userId = userInfo?.userId
+            if (userId != null) {
+                avatarViewModel.uploadAvatar(userId, it)
+            }
+        }
+    }
 
     LaunchedEffect(userInfo) {
         nickname = userInfo?.username ?: ""
+        // 调试：打印头像URL
+        android.util.Log.d("EditProfileScreen", "用户信息更新: avatar=${userInfo?.avatar}")
+    }
+
+    // 显示错误消息
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            avatarViewModel.clearErrorMessage()
+        }
+    }
+
+    // 显示成功消息并刷新用户信息
+    LaunchedEffect(successMessage) {
+        successMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            avatarViewModel.clearSuccessMessage()
+            // 刷新用户信息以更新头像
+            viewModel.refreshUserInfo()
+        }
     }
 
     Scaffold(
@@ -67,6 +153,7 @@ fun EditProfileScreen(
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color(0xFFF7F8FA)
     ) { paddingValues ->
         Column(
@@ -83,44 +170,100 @@ fun EditProfileScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape)
-                        .background(PrimaryBlue)
-                        .clickable {
-                            // TODO: 打开相册选择头像
-                        },
+                    modifier = Modifier.size(100.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "头像",
-                        tint = Color.White,
-                        modifier = Modifier.size(60.dp)
-                    )
-
-                    // 相机图标
+                    // 头像
                     Box(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(32.dp)
+                            .size(100.dp)
                             .clip(CircleShape)
-                            .background(Color.White),
+                            .background(if (userInfo?.avatar.isNullOrEmpty()) PrimaryBlue else Color.Transparent)
+                            .border(2.dp, PrimaryBlue.copy(alpha = 0.2f), CircleShape)
+                            .clickable(enabled = !isUploading) {
+                                imagePickerLauncher.launch("image/*")
+                            },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CameraAlt,
-                            contentDescription = "更换头像",
-                            tint = PrimaryBlue,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        if (!userInfo?.avatar.isNullOrEmpty()) {
+                            // 使用Coil加载头像
+                            val avatarUrl = userInfo?.avatar
+                            android.util.Log.d("EditProfileScreen", "正在加载头像: $avatarUrl")
+
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(avatarUrl)
+                                    .crossfade(true)
+                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                    .memoryCachePolicy(CachePolicy.ENABLED)
+                                    .networkCachePolicy(CachePolicy.ENABLED)
+                                    .listener(
+                                        onError = { _, result ->
+                                            android.util.Log.e("EditProfileScreen", "头像加载失败: ${result.throwable.message}")
+                                        },
+                                        onSuccess = { _, _ ->
+                                            android.util.Log.d("EditProfileScreen", "头像加载成功")
+                                        }
+                                    )
+                                    .build(),
+                                contentDescription = "头像",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "默认头像",
+                                tint = Color.White,
+                                modifier = Modifier.size(60.dp)
+                            )
+                        }
+
+                        // 上传进度遮罩
+                        if (isUploading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.5f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    progress = uploadProgress / 100f,
+                                    color = Color.White,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // 相机图标
+                    if (!isUploading) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                                .border(2.dp, PrimaryBlue.copy(alpha = 0.2f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "更换头像",
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "点击更换头像",
+                    text = if (isUploading) "上传中 $uploadProgress%" else "点击更换头像",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -176,8 +319,12 @@ fun EditProfileScreen(
             currentNickname = nickname,
             onDismiss = { showNicknameDialog = false },
             onConfirm = { newNickname ->
-                nickname = newNickname
-                // TODO: 调用 API 更新昵称
+                // 调用 API 更新昵称
+                val userId = userInfo?.userId
+                if (userId != null) {
+                    viewModel.updateUserInfo(userId, username = newNickname)
+                    nickname = newNickname
+                }
                 showNicknameDialog = false
             }
         )

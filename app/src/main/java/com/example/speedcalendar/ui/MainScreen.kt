@@ -35,14 +35,53 @@ import com.example.speedcalendar.features.home.HomeScreen
 import com.example.speedcalendar.features.mine.MineScreen
 import com.example.speedcalendar.features.mine.settings.PersonalSettingsScreen
 import com.example.speedcalendar.features.mine.settings.EditProfileScreen
+import com.example.speedcalendar.features.mine.settings.PrivacySettingsScreen
 import com.example.speedcalendar.navigation.Screen
 import com.example.speedcalendar.viewmodel.AuthViewModel
 
+/**
+ * TODO: 应用启动和前后台切换时刷新数据
+ * 当前问题：
+ * 1. 冷启动只读缓存：应用启动时不从后端获取最新数据
+ * 2. 后台返回不刷新：从后台切到前台时不更新数据
+ * 3. 数据可能过期：长时间不使用后，本地数据与后端不一致
+ *
+ * 改进建议：
+ * 方案1：应用启动时刷新
+ *   LaunchedEffect(Unit) {
+ *       val lastUpdateTime = userPreferences.getLastUpdateTime()
+ *       if (System.currentTimeMillis() - lastUpdateTime > REFRESH_THRESHOLD) {
+ *           authViewModel.fetchUserInfoFromServer()
+ *       }
+ *   }
+ *
+ * 方案2：监听生命周期
+ *   val lifecycleOwner = LocalLifecycleOwner.current
+ *   DisposableEffect(lifecycleOwner) {
+ *       val observer = LifecycleEventObserver { _, event ->
+ *           if (event == Lifecycle.Event.ON_RESUME) {
+ *               authViewModel.refreshIfNeeded()
+ *           }
+ *       }
+ *       lifecycleOwner.lifecycle.addObserver(observer)
+ *       onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+ *   }
+ *
+ * 方案3：智能刷新策略
+ *   - 短时间内（5分钟）返回前台：不刷新
+ *   - 长时间（1小时）返回前台：自动刷新
+ *   - 首次启动：强制刷新
+ */
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     // 在 MainScreen 级别创建共享的 AuthViewModel
     val authViewModel: AuthViewModel = viewModel()
+
+    // TODO: 在这里添加生命周期监听和刷新逻辑
+    // 示例：
+    // val lifecycleOwner = LocalLifecycleOwner.current
+    // DisposableEffect(lifecycleOwner) { ... }
 
     Scaffold(
         bottomBar = {
@@ -95,6 +134,9 @@ fun MainScreen() {
                     onEditProfile = {
                         navController.navigate(Screen.EditProfile.route)
                     },
+                    onPrivacySettings = {
+                        navController.navigate(Screen.PrivacySettings.route)
+                    },
                     viewModel = authViewModel // 传递共享的 ViewModel
                 )
             }
@@ -102,6 +144,12 @@ fun MainScreen() {
                 EditProfileScreen(
                     onBack = { navController.popBackStack() },
                     viewModel = authViewModel // 传递共享的 ViewModel
+                )
+            }
+            composable(Screen.PrivacySettings.route) {
+                PrivacySettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    authViewModel = authViewModel // 传递共享的 ViewModel
                 )
             }
         }

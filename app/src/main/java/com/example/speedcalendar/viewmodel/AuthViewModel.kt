@@ -48,6 +48,37 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     init {
         // 初始化时检查登录状态
         checkLoginStatus()
+
+        // TODO: 数据同步问题 - 多设备和实时性改进
+        // 当前问题：
+        // 1. 多设备同步：设备A修改数据后，设备B不会自动更新，只有重新登录才会刷新
+        // 2. 应用启动：从本地存储读取，不会从后端获取最新数据，可能显示过期信息
+        // 3. 无推送机制：其他设备或后台更新数据后，当前设备无法感知
+        //
+        // 改进方案（按优先级）：
+        // 方案1（推荐开发阶段）：定期刷新
+        //   - 应用启动时调用后端API获取最新用户信息
+        //   - 从后台切换到前台时刷新
+        //   - 进入个人资料页面时刷新
+        //
+        // 方案2：缓存过期机制
+        //   - UserPreferences中保存数据时间戳
+        //   - 读取时检查是否过期（如1小时）
+        //   - 过期则自动从后端刷新
+        //
+        // 方案3：版本号机制
+        //   - 后端返回数据版本号
+        //   - 前端每次请求时对比版本号
+        //   - 不一致则拉取最新数据
+        //
+        // 方案4（生产环境推荐）：WebSocket推送
+        //   - 后端数据变化时通过WebSocket推送
+        //   - 前端接收通知后自动刷新
+        //   - 实现真正的实时同步
+        //
+        // 方案5：用户手动刷新
+        //   - 个人资料页面添加下拉刷新
+        //   - 用户手动触发数据更新
     }
 
     /**
@@ -56,6 +87,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private fun checkLoginStatus() {
         _isLoggedIn.value = userPreferences.isLoggedIn()
         _userInfo.value = userPreferences.getUserInfo()
+    }
+
+    /**
+     * 刷新用户信息
+     * 从本地存储重新加载用户信息
+     */
+    fun refreshUserInfo() {
+        val newUserInfo = userPreferences.getUserInfo()
+        Log.d("AuthViewModel", "刷新用户信息: avatar=${newUserInfo?.avatar}")
+        _userInfo.value = newUserInfo
     }
 
     /**
@@ -175,6 +216,55 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun clearSuccessMessage() {
         _successMessage.value = null
+    }
+
+    /**
+     * 更新用户信息
+     */
+    fun updateUserInfo(userId: String, username: String? = null, avatar: String? = null) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _errorMessage.value = null
+
+                // 创建更新请求
+                val request = UpdateUserInfoRequest(
+                    username = username,
+                    avatar = avatar
+                )
+
+                // 调用API
+                val response = authApiService.updateUserInfo(userId, request)
+
+                if (response.isSuccessful) {
+                    val apiResponse = response.body()
+                    if (apiResponse != null && apiResponse.code == 200) {
+                        val updatedUserInfo = apiResponse.data
+                        if (updatedUserInfo != null) {
+                            // 更新本地状态
+                            _userInfo.value = updatedUserInfo
+
+                            // 更新本地存储
+                            userPreferences.updateUserInfo(updatedUserInfo)
+
+                            _successMessage.value = "更新成功"
+                            Log.d("AuthViewModel", "用户信息更新成功")
+                        } else {
+                            _errorMessage.value = "更新响应数据为空"
+                        }
+                    } else {
+                        _errorMessage.value = apiResponse?.message ?: "更新失败"
+                    }
+                } else {
+                    _errorMessage.value = "网络请求失败：${response.code()}"
+                }
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "更新用户信息失败", e)
+                _errorMessage.value = "网络连接失败：${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
     /**

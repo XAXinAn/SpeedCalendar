@@ -28,6 +28,7 @@ import com.example.speedcalendar.viewmodel.AuthViewModel
 fun PersonalSettingsScreen(
     onBack: () -> Unit,
     onEditProfile: () -> Unit,
+    onPrivacySettings: () -> Unit = {},
     viewModel: AuthViewModel = viewModel()
 ) {
     val userInfo by viewModel.userInfo.collectAsState()
@@ -38,6 +39,7 @@ fun PersonalSettingsScreen(
         buildPersonalSettings(
             userInfo = userInfo,
             onEditProfile = onEditProfile,
+            onPrivacySettings = onPrivacySettings,
             onLogout = { showLogoutDialog = true }
         )
     }
@@ -117,6 +119,7 @@ fun PersonalSettingsScreen(
 private fun buildPersonalSettings(
     userInfo: com.example.speedcalendar.data.model.UserInfo?,
     onEditProfile: () -> Unit,
+    onPrivacySettings: () -> Unit,
     onLogout: () -> Unit
 ): List<SettingsSection> {
     return listOf(
@@ -145,7 +148,7 @@ private fun buildPersonalSettings(
             )
         ),
 
-        // 隐私与安全区块（示例，可扩展）
+        // 隐私与安全区块
         SettingsSection(
             id = "privacy_security",
             title = "隐私与安全",
@@ -165,7 +168,7 @@ private fun buildPersonalSettings(
                     subtitle = "管理个人信息的可见范围",
                     type = SettingsItemType.Navigation(
                         icon = Icons.Default.Shield,
-                        onClick = { /* TODO: 导航到隐私设置页面 */ }
+                        onClick = onPrivacySettings
                     )
                 )
             )

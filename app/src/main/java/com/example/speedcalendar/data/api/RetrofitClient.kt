@@ -17,7 +17,8 @@ object RetrofitClient {
      * 真机 + USB 调试 + adb reverse 使用 localhost
      * 真机访问需要使用主机的实际IP地址
      */
-    private const val BASE_URL = "http://localhost:8080/api/"
+    //private const val BASE_URL = "http://localhost:8080/api/"
+    private const val BASE_URL = "http://10.0.2.2:8080/api/"
 
     /**
      * OkHttp客户端
@@ -52,5 +53,19 @@ object RetrofitClient {
      */
     val authApiService: AuthApiService by lazy {
         retrofit.create(AuthApiService::class.java)
+    }
+
+    /**
+     * PrivacyApiService实例
+     */
+    val privacyApiService: PrivacyApiService by lazy {
+        retrofit.create(PrivacyApiService::class.java)
+    }
+
+    /**
+     * AvatarApiService实例
+     */
+    val avatarApiService: AvatarApiService by lazy {
+        retrofit.create(AvatarApiService::class.java)
     }
 }
