@@ -38,7 +38,9 @@ data class AITool(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AIScreen() {
+fun AIScreen(
+    onNavigateToChat: (String?) -> Unit = {}
+) {
     // 定义AI工具列表
     val aiTools = listOf(
         AITool(
@@ -49,11 +51,11 @@ fun AIScreen() {
             isAvailable = true
         ),
         AITool(
-            id = "tool2",
-            name = "待开发",
+            id = "chat",
+            name = "AI聊天",
             icon = Icons.Default.AutoAwesome,
             backgroundColor = Color(0xFF5AD8A6),
-            isAvailable = false
+            isAvailable = true
         ),
         AITool(
             id = "tool3",
@@ -110,17 +112,27 @@ fun AIScreen() {
                 top = paddingValues.calculateTopPadding() + 16.dp,
                 bottom = 16.dp
             ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
             modifier = Modifier.fillMaxSize()
         ) {
             items(aiTools) { tool ->
                 AIToolCard(
                     tool = tool,
                     onClick = {
-                        // TODO: 处理工具点击事件
                         if (tool.isAvailable) {
-                            // 跳转到对应的工具页面
+                            when (tool.id) {
+                                "chat" -> {
+                                    // 跳转到AI聊天界面
+                                    onNavigateToChat(null)
+                                }
+                                "ocr" -> {
+                                    // TODO: 跳转到OCR识别界面
+                                }
+                                else -> {
+                                    // TODO: 处理其他工具
+                                }
+                            }
                         }
                     }
                 )

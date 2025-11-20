@@ -26,11 +26,14 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.speedcalendar.features.ai.AIScreen
+import com.example.speedcalendar.features.ai.chat.AIChatScreen
 import com.example.speedcalendar.features.home.HomeScreen
 import com.example.speedcalendar.features.mine.MineScreen
 import com.example.speedcalendar.features.mine.settings.PersonalSettingsScreen
@@ -38,6 +41,7 @@ import com.example.speedcalendar.features.mine.settings.EditProfileScreen
 import com.example.speedcalendar.features.mine.settings.PrivacySettingsScreen
 import com.example.speedcalendar.navigation.Screen
 import com.example.speedcalendar.viewmodel.AuthViewModel
+import java.net.URLDecoder
 
 /**
  * TODO: 应用启动和前后台切换时刷新数据
@@ -119,7 +123,31 @@ fun MainScreen() {
                 bottom = innerPadding.calculateBottomPadding()))
         ) {
             composable(Screen.Home.route) { HomeScreen() }
-            composable(Screen.AI.route) { AIScreen() }
+            composable(Screen.AI.route) {
+                AIScreen(
+                    onNavigateToChat = { initialMessage ->
+                        navController.navigate(Screen.AIChat.createRoute(initialMessage))
+                    }
+                )
+            }
+            composable(
+                route = Screen.AIChat.route,
+                arguments = listOf(
+                    navArgument("initialMessage") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                val initialMessage = backStackEntry.arguments?.getString("initialMessage")?.let {
+                    URLDecoder.decode(it, "UTF-8")
+                }
+                AIChatScreen(
+                    initialMessage = initialMessage,
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable(Screen.Mine.route) {
                 MineScreen(
                     onNavigateToPersonalSettings = {

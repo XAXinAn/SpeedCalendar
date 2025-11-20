@@ -7,4 +7,13 @@ sealed class Screen(val route: String, val title: String) {
     object PersonalSettings : Screen("personal_settings", "个人设置")
     object EditProfile : Screen("edit_profile", "编辑资料")
     object PrivacySettings : Screen("privacy_settings", "隐私设置")
+    object AIChat : Screen("ai_chat?initialMessage={initialMessage}", "AI聊天") {
+        fun createRoute(initialMessage: String? = null): String {
+            return if (initialMessage != null) {
+                "ai_chat?initialMessage=${java.net.URLEncoder.encode(initialMessage, "UTF-8")}"
+            } else {
+                "ai_chat"
+            }
+        }
+    }
 }

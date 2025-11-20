@@ -68,4 +68,11 @@ object RetrofitClient {
     val avatarApiService: AvatarApiService by lazy {
         retrofit.create(AvatarApiService::class.java)
     }
+
+    /**
+     * AIChatApiService实例
+     */
+    val aiChatApiService: AIChatApiService by lazy {
+        retrofit.create(AIChatApiService::class.java)
+    }
 }
