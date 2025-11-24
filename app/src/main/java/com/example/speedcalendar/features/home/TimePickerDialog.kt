@@ -1,6 +1,5 @@
 package com.example.speedcalendar.features.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,26 +22,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.speedcalendar.ui.theme.PrimaryBlue
-import java.time.YearMonth
 
 @Composable
-fun YearMonthPickerDialog(
+fun TimePickerDialog(
     onDismiss: () -> Unit,
-    onConfirm: (year: Int, month: Int) -> Unit,
-    initialYearMonth: YearMonth
+    onConfirm: (hour: Int, minute: Int) -> Unit,
+    initialHour: Int,
+    initialMinute: Int
 ) {
-    val currentYear = YearMonth.now().year
-    val yearItems = (currentYear - 10..currentYear + 10).map { it.toString() }
-    val monthItems = (1..12).map { it.toString().padStart(2, '0') }
+    val hourItems = (0..23).map { it.toString().padStart(2, '0') }
+    val minuteItems = (0..59).map { it.toString().padStart(2, '0') }
 
-    var selectedYear by remember { mutableIntStateOf(initialYearMonth.year) }
-    var selectedMonth by remember { mutableIntStateOf(initialYearMonth.monthValue) }
+    var selectedHour by remember { mutableIntStateOf(initialHour) }
+    var selectedMinute by remember { mutableIntStateOf(initialMinute) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -54,7 +51,7 @@ fun YearMonthPickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "选择年月",
+                    "选择时间",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
@@ -67,20 +64,18 @@ fun YearMonthPickerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     WheelPicker(
-                        items = yearItems,
-                        onItemSelected = { _, item -> selectedYear = item.toInt() },
-                        initialIndex = yearItems.indexOf(selectedYear.toString()),
+                        items = hourItems,
+                        onItemSelected = { _, item -> selectedHour = item.toInt() },
+                        initialIndex = hourItems.indexOf(selectedHour.toString().padStart(2, '0')),
                         modifier = Modifier.weight(1f)
                     )
-                    Text("年", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(":", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp))
                     WheelPicker(
-                        items = monthItems,
-                        onItemSelected = { _, item -> selectedMonth = item.toInt() },
-                        initialIndex = monthItems.indexOf(selectedMonth.toString().padStart(2, '0')),
+                        items = minuteItems,
+                        onItemSelected = { _, item -> selectedMinute = item.toInt() },
+                        initialIndex = minuteItems.indexOf(selectedMinute.toString().padStart(2, '0')),
                         modifier = Modifier.weight(1f)
                     )
-                    Text("月", fontSize = 18.sp, fontWeight = FontWeight.Medium)
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -94,7 +89,7 @@ fun YearMonthPickerDialog(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { onConfirm(selectedYear, selectedMonth) },
+                        onClick = { onConfirm(selectedHour, selectedMinute) },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
                     ) {
                         Text("确定")

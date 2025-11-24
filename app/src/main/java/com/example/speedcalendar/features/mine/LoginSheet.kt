@@ -2,7 +2,6 @@ package com.example.speedcalendar.features.mine
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,6 +22,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,8 +31,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -45,11 +46,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 import com.example.speedcalendar.viewmodel.AuthViewModel
 
@@ -63,7 +64,6 @@ fun LoginSheet(
     var verificationCode by remember { mutableStateOf("") }
     var agreementChecked by remember { mutableStateOf(false) }
 
-    // 状态监听
     val isLoading by viewModel.isLoading.collectAsState()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -73,7 +73,6 @@ fun LoginSheet(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 监听登录成功，自动关闭登录页面
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
             Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
@@ -81,7 +80,6 @@ fun LoginSheet(
         }
     }
 
-    // 监听错误消息
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -89,7 +87,6 @@ fun LoginSheet(
         }
     }
 
-    // 监听成功消息
     LaunchedEffect(successMessage) {
         successMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -98,134 +95,76 @@ fun LoginSheet(
     }
 
     Scaffold(
+        containerColor = Background,
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "手机号登录",
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    Spacer(modifier = Modifier.padding(end = 48.dp)) // Balance title
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                title = { Text("手机号登录", fontWeight = FontWeight.Bold) },
+                navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        containerColor = Color.White
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(64.dp))
-
-            // Phone Number Field
-            TextField(
-                value = phoneNumber,
-                onValueChange = { phoneNumber = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("请输入手机号", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                    focusedContainerColor = Color(0xFFF7F8FA),
-                    unfocusedContainerColor = Color(0xFFF7F8FA),
-                )
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Verification Code Field
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextField(
-                    value = verificationCode,
-                    onValueChange = { verificationCode = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("请输入验证码", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors = TextFieldDefaults.colors(
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        focusedContainerColor = Color(0xFFF7F8FA),
-                        unfocusedContainerColor = Color(0xFFF7F8FA),
-                    )
-                )
-                TextButton(
-                    onClick = {
-                        if (countdown == 0) {
-                            viewModel.sendVerificationCode(phoneNumber)
-                        }
-                    },
-                    enabled = countdown == 0 && phoneNumber.isNotBlank()
-                ) {
-                    Text(
-                        text = if (countdown > 0) "${countdown}秒" else "发送验证码",
-                        color = if (countdown == 0 && phoneNumber.isNotBlank()) PrimaryBlue else Color.Gray,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Agreement Row
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Checkbox(
-                    checked = agreementChecked,
-                    onCheckedChange = { agreementChecked = it },
-                    colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue)
-                )
-                Text(
-                    text = "登录即视为同意《用户服务协议》《用户隐私政策》",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // "Login" Button
+        bottomBar = {
             Button(
-                onClick = {
-                    viewModel.phoneLogin(phoneNumber, verificationCode)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(25.dp),
+                onClick = { viewModel.phoneLogin(phoneNumber, verificationCode) },
+                enabled = agreementChecked && phoneNumber.isNotBlank() && verificationCode.length == 6 && !isLoading,
+                modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                enabled = agreementChecked && phoneNumber.isNotBlank() && verificationCode.length == 6 && !isLoading
+                shape = RoundedCornerShape(12.dp)
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                }
-                Text(
-                    text = if (isLoading) "登录中..." else "登录",
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                else Text("登录", fontSize = 18.sp)
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Column(Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 24.dp)) {
+            Spacer(Modifier.height(24.dp))
+            Text("欢迎回来！", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("使用手机号登录以继续", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(40.dp))
+
+            LoginInputItem("手机号", phoneNumber, { phoneNumber = it }, KeyboardOptions(keyboardType = KeyboardType.Phone))
+            Spacer(Modifier.height(16.dp))
+            VerificationCodeInputItem(verificationCode, { verificationCode = it }, countdown, { viewModel.sendVerificationCode(phoneNumber) })
+            Spacer(Modifier.height(24.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(agreementChecked, { agreementChecked = it }, colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue))
+                Text("我已阅读并同意《服务协议》和《隐私政策》", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoginInputItem(label: String, value: String, onValueChange: (String) -> Unit, keyboardOptions: KeyboardOptions) {
+    Column {
+        Text(label, fontWeight = FontWeight.Medium, modifier = Modifier.padding(bottom = 8.dp))
+        BasicTextField(value, onValueChange,
+            modifier = Modifier.fillMaxWidth().height(56.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 16.dp),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
+            keyboardOptions = keyboardOptions, singleLine = true
+        )
+    }
+}
+
+@Composable
+private fun VerificationCodeInputItem(value: String, onValueChange: (String) -> Unit, countdown: Int, onSendCode: () -> Unit) {
+    Column {
+        Text("验证码", fontWeight = FontWeight.Medium, modifier = Modifier.padding(bottom = 8.dp))
+        Row(Modifier.fillMaxWidth().height(56.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)), verticalAlignment = Alignment.CenterVertically) {
+            BasicTextField(value, onValueChange,
+                modifier = Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 16.dp),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true
+            )
+            HorizontalDivider(Modifier.width(1.dp).height(24.dp).background(Background))
+            TextButton(
+                onClick = onSendCode, 
+                enabled = countdown == 0,
+                colors = ButtonDefaults.textButtonColors(contentColor = PrimaryBlue, disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+            ) {
+                Text(if (countdown > 0) "${countdown}s 后重试" else "获取验证码", fontWeight = FontWeight.Bold)
             }
         }
     }

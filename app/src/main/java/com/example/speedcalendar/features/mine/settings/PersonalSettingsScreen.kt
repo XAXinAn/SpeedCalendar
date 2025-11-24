@@ -1,106 +1,141 @@
 package com.example.speedcalendar.features.mine.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.viewmodel.AuthViewModel
 
-/**
- * 个人设置页面
- * 企业级实践：
- * 1. 数据驱动：设置项通过数据结构定义，易于维护和扩展
- * 2. 组件化：使用可复用的 SettingsSectionView 组件
- * 3. 清晰分层：UI、数据、业务逻辑分离
- * 4. 易于扩展：添加新设置项只需修改 settingsSections 列表
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonalSettingsScreen(
     onBack: () -> Unit,
     onEditProfile: () -> Unit,
-    onPrivacySettings: () -> Unit = {},
+    onPrivacySettings: () -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
-    val userInfo by viewModel.userInfo.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // 定义设置区块（数据驱动，易于扩展）
-    val settingsSections = remember(userInfo) {
-        buildPersonalSettings(
-            userInfo = userInfo,
-            onEditProfile = onEditProfile,
-            onPrivacySettings = onPrivacySettings,
-            onLogout = { showLogoutDialog = true }
-        )
-    }
-
     Scaffold(
+        containerColor = Background,
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "个人设置",
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("个人设置", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
-                actions = {
-                    Spacer(modifier = Modifier.padding(end = 48.dp))
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+                    containerColor = Background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
-        },
-        containerColor = Color(0xFFF7F8FA)
-    ) { paddingValues ->
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(innerPadding)
                 .padding(vertical = 16.dp)
         ) {
-            // 渲染所有设置区块
-            settingsSections.forEach { section ->
-                SettingsSectionView(
-                    section = section,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
+            SettingsItemGroup(
+                title = "账号信息",
+                items = {
+                    SettingsItem(
+                        icon = Icons.Outlined.Edit,
+                        title = "编辑资料",
+                        onClick = onEditProfile
+                    )
+                    SettingsItem(
+                        icon = Icons.Outlined.Lock,
+                        title = "修改密码",
+                        onClick = { /* TODO: Navigate to change password */ }
+                    )
+                }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            SettingsItemGroup(
+                title = "隐私与安全",
+                items = {
+                    SettingsItem(
+                        icon = Icons.Outlined.Shield,
+                        title = "隐私设置",
+                        onClick = onPrivacySettings
+                    )
+                }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            SettingsItemGroup(
+                title = null,
+                items = {
+                    SettingsItem(
+                        icon = Icons.AutoMirrored.Filled.Logout,
+                        title = "退出登录",
+                        onClick = { showLogoutDialog = true },
+                        isDangerous = true
+                    )
+                }
+            )
         }
     }
 
-    // 退出登录确认对话框
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("退出登录") },
-            text = { Text("确定要退出登录吗？") },
+            title = { Text("退出登录", fontWeight = FontWeight.Bold) },
+            text = { Text("您确定要退出登录吗？") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showLogoutDialog = false
                         viewModel.logout()
                         onBack()
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("确定", color = MaterialTheme.colorScheme.error)
+                    Text("确定")
                 }
             },
             dismissButton = {
@@ -112,83 +147,58 @@ fun PersonalSettingsScreen(
     }
 }
 
-/**
- * 构建个人设置项列表
- * 企业级实践：使用 Builder 模式，易于扩展和维护
- */
-private fun buildPersonalSettings(
-    userInfo: com.example.speedcalendar.data.model.UserInfo?,
-    onEditProfile: () -> Unit,
-    onPrivacySettings: () -> Unit,
-    onLogout: () -> Unit
-): List<SettingsSection> {
-    return listOf(
-        // 账号信息区块
-        SettingsSection(
-            id = "account_info",
-            title = "账号信息",
-            items = listOf(
-                SettingsItem(
-                    id = "edit_profile",
-                    title = "编辑资料",
-                    subtitle = "修改头像、昵称等个人信息",
-                    type = SettingsItemType.Navigation(
-                        icon = Icons.Default.Person,
-                        onClick = onEditProfile
-                    )
-                ),
-                SettingsItem(
-                    id = "phone",
-                    title = "手机号",
-                    type = SettingsItemType.Text(
-                        icon = Icons.Default.Phone,
-                        value = userInfo?.phone ?: "未绑定"
-                    )
-                )
+@Composable
+private fun SettingsItemGroup(title: String?, items: @Composable ColumnScope.() -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        if (title != null) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
             )
-        ),
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+        ) {
+            items()
+        }
+    }
+}
 
-        // 隐私与安全区块
-        SettingsSection(
-            id = "privacy_security",
-            title = "隐私与安全",
-            items = listOf(
-                SettingsItem(
-                    id = "password",
-                    title = "修改密码",
-                    subtitle = "定期更换密码以保护账号安全",
-                    type = SettingsItemType.Navigation(
-                        icon = Icons.Default.Lock,
-                        onClick = { /* TODO: 导航到修改密码页面 */ }
-                    )
-                ),
-                SettingsItem(
-                    id = "privacy",
-                    title = "隐私设置",
-                    subtitle = "管理个人信息的可见范围",
-                    type = SettingsItemType.Navigation(
-                        icon = Icons.Default.Shield,
-                        onClick = onPrivacySettings
-                    )
-                )
-            )
-        ),
+@Composable
+private fun ColumnScope.SettingsItem(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit,
+    isDangerous: Boolean = false
+) {
+    val contentColor = if (isDangerous) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
 
-        // 账号操作区块
-        SettingsSection(
-            id = "account_actions",
-            title = null,
-            items = listOf(
-                SettingsItem(
-                    id = "logout",
-                    title = "退出登录",
-                    type = SettingsItemType.Action(
-                        icon = Icons.Default.Logout,
-                        onClick = onLogout,
-                        dangerous = true
-                    )
-                )
-            )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = contentColor)
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            fontSize = 16.sp,
+            color = contentColor,
+            modifier = Modifier.weight(1f)
         )
-    )
+        if (!isDangerous) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
+        }
+    }
+    HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.background)
 }

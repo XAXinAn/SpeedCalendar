@@ -51,6 +51,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 import java.time.LocalDate
 import java.time.YearMonth
@@ -78,9 +80,9 @@ fun HomeScreen() {
         }
 
         Scaffold(
-            containerColor = Color(0xFFF7F8FA), // Consistent background color
+            containerColor = Background,
             floatingActionButton = {
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     AnimatedVisibility(
                         visible = currentMonth != YearMonth.now() || selectedDate != LocalDate.now(),
                         enter = fadeIn(),
@@ -91,20 +93,20 @@ fun HomeScreen() {
                                 currentMonth = YearMonth.now()
                                 selectedDate = LocalDate.now()
                             },
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant, // A lighter color for secondary action
-                            contentColor = MaterialTheme.colorScheme.primary,
+                            containerColor = Color.White,
+                            contentColor = PrimaryBlue,
                             shape = CircleShape,
-                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
+                            elevation = FloatingActionButtonDefaults.elevation(4.dp, 4.dp)
                         ) {
                             Icon(Icons.Default.CalendarToday, contentDescription = "回到今天")
                         }
                     }
                     FloatingActionButton(
                         onClick = { showAddScheduleSheet = true },
-                        containerColor = PrimaryBlue, // Use the primary blue
+                        containerColor = PrimaryBlue,
                         contentColor = Color.White,
                         shape = CircleShape,
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
+                        elevation = FloatingActionButtonDefaults.elevation(4.dp, 4.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "添加")
                     }
@@ -128,7 +130,7 @@ fun HomeScreen() {
                     onNextMonth = { currentMonth = currentMonth.plusMonths(1) },
                     onYearMonthClick = { showYearMonthPicker = true }
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 var dragAmount by remember { mutableStateOf(0f) }
 
@@ -193,22 +195,24 @@ fun CalendarHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
     ) {
         IconButton(onClick = onPreviousMonth) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "上个月")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "上个月", tint = PrimaryBlue)
         }
         Text(
             text = "${yearMonth.year}年 ${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.CHINESE)}",
             fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier
-                .weight(1f)
+                .padding(horizontal = 16.dp)
                 .clickable(remember { MutableInteractionSource() }, null, onClick = onYearMonthClick)
         )
         IconButton(onClick = onNextMonth) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "下个月")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "下个月", tint = PrimaryBlue)
         }
     }
 }
@@ -224,20 +228,21 @@ fun CalendarGrid(
     val paddingDays = (firstDayOfMonth.dayOfWeek.value - 1) // Monday is 1, Sunday is 7
 
     val startDate = firstDayOfMonth.minusDays(paddingDays.toLong())
-    val numRows = 6 // Always display up to 6 rows
+    val numRows = 6
 
-    Column(modifier = modifier.padding(horizontal = 16.dp)) {
+    Column(modifier = modifier.padding(horizontal = 24.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
             listOf("一", "二", "三", "四", "五", "六", "日").forEach { day ->
                 Text(
                     text = day,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         repeat(numRows) { weekIndex ->
             val weekDates = (0..6).map {
@@ -246,7 +251,7 @@ fun CalendarGrid(
             val showRow = weekDates.any { YearMonth.from(it) == yearMonth }
 
             if (showRow) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     weekDates.forEach { date ->
                         val isCurrentMonth = YearMonth.from(date) == yearMonth
 
@@ -261,7 +266,6 @@ fun CalendarGrid(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(2.dp)
                                     .clip(CircleShape)
                                     .background(color = if (isSelected && isCurrentMonth) PrimaryBlue else Color.Transparent)
                                     .clickable(
@@ -274,17 +278,19 @@ fun CalendarGrid(
                             ) {
                                 Text(
                                     text = date.dayOfMonth.toString(),
+                                    fontWeight = if (isSelected && isCurrentMonth) FontWeight.Bold else FontWeight.Normal,
                                     color = when {
                                         isSelected && isCurrentMonth -> Color.White
                                         isToday && isCurrentMonth -> PrimaryBlue
                                         isCurrentMonth -> MaterialTheme.colorScheme.onBackground
-                                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                     }
                                 )
                             }
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }

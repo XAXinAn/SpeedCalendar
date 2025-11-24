@@ -5,27 +5,32 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Title
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,17 +38,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddScheduleSheet(onClose: () -> Unit) {
-    var title by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf(TextFieldValue("")) }
+    var location by remember { mutableStateOf(TextFieldValue("")) }
     var time by remember { mutableStateOf<String?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
 
@@ -66,120 +75,123 @@ fun AddScheduleSheet(onClose: () -> Unit) {
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F8FA)) // Consistent background
-            .padding(WindowInsets.statusBars.asPaddingValues())
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onClose) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Text(
-                text = "添加日程",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onBackground
+    Scaffold(
+        containerColor = Background,
+        topBar = {
+            TopAppBar(
+                title = { Text("添加日程", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
-            IconButton(onClick = { /* TODO: 保存日程逻辑 */ }) {
-                Icon(Icons.Filled.Check, contentDescription = "保存", tint = PrimaryBlue) // Use Primary Blue for the main action
+        },
+        bottomBar = {
+            Button(
+                onClick = { /* TODO: 保存日程 */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("保存", fontSize = 18.sp)
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            InfoRow(
-                icon = Icons.Default.Title,
-                label = "标题"
-            ) {
-                BasicTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
-                    decorationBox = { innerTextField ->
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
-                            if (title.isEmpty()) {
-                                Text("标题", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            innerTextField()
-                        }
-                    }
-                )
-            }
-
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 24.dp)
+        ) {
+            Spacer(modifier = Modifier.height(24.dp))
+            InputItem(icon = Icons.Default.Title, label = "标题", value = title, onValueChange = { title = it })
             Spacer(modifier = Modifier.height(16.dp))
-
-            InfoRow(
-                icon = Icons.Default.LocationOn,
-                label = "地点"
-            ) {
-                BasicTextField(
-                    value = location,
-                    onValueChange = { location = it },
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
-                    decorationBox = { innerTextField ->
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
-                            if (location.isEmpty()) {
-                                Text("地点", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            innerTextField()
-                        }
-                    }
-                )
-            }
-
+            InputItem(icon = Icons.Default.LocationOn, label = "地点", value = location, onValueChange = { location = it })
             Spacer(modifier = Modifier.height(16.dp))
-
-            InfoRow(
+            ClickableItem(
                 icon = Icons.Default.Schedule,
-                label = "时间"
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(remember { MutableInteractionSource() }, indication = null) { showTimePicker = true },
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    if (time == null) {
-                        Text("时间", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        Text(text = time!!, color = MaterialTheme.colorScheme.onBackground)
-                    }
-                }
-            }
+                label = "时间",
+                value = time ?: "请选择时间",
+                onClick = { showTimePicker = true },
+                hasValue = time != null
+            )
         }
     }
 }
 
+
 @Composable
-private fun InfoRow(
+private fun InputItem(
     icon: ImageVector,
     label: String,
-    content: @Composable () -> Unit
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit
 ) {
     Column {
+        Text(label, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.height(8.dp))
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .background(Color.White, RoundedCornerShape(12.dp))
+                .padding(horizontal = 16.dp),
+            textStyle = LocalTextStyle.current.copy(fontSize = 16.sp),
+            decorationBox = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (value.text.isEmpty()) {
+                            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
+                        }
+                        it()
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ClickableItem(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    hasValue: Boolean
+) {
+    Column {
+        Text(label, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.height(48.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .background(Color.White, RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick, interactionSource = remember { MutableInteractionSource() }, indication = null)
+                .padding(horizontal = 16.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.padding(end = 16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant // Consistent icon tint
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = value,
+                color = if (hasValue) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 16.sp
             )
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                content()
-            }
         }
-        HorizontalDivider(color = PrimaryBlue.copy(alpha = 0.2f), modifier = Modifier.padding(start = 40.dp))
     }
 }

@@ -2,33 +2,64 @@ package com.example.speedcalendar.features.mine.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.speedcalendar.data.model.PrivacySettingDTO
 import com.example.speedcalendar.data.model.VisibilityLevel
 import com.example.speedcalendar.data.model.VisibilityOption
-import com.example.speedcalendar.ui.theme.LightBlueSurface
+import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 import com.example.speedcalendar.viewmodel.AuthViewModel
 import com.example.speedcalendar.viewmodel.PrivacyViewModel
 
-/**
- * 隐私设置页面
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivacySettingsScreen(
@@ -42,288 +73,135 @@ fun PrivacySettingsScreen(
     val successMessage by privacyViewModel.successMessage.collectAsState()
     val errorMessage by privacyViewModel.errorMessage.collectAsState()
 
-    // 本地编辑状态
     var localSettings by remember { mutableStateOf<List<PrivacySettingDTO>>(emptyList()) }
     var showDialog by remember { mutableStateOf<PrivacySettingDTO?>(null) }
-    var hasChanges by remember { mutableStateOf(false) }
 
-    // 加载数据
+    val hasChanges by remember(localSettings, privacySettings) {
+        derivedStateOf {
+            if (localSettings.isEmpty() || privacySettings.isEmpty()) false
+            else localSettings.zip(privacySettings).any { (local, original) -> local.visibilityLevel != original.visibilityLevel }
+        }
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(userInfo) {
-        userInfo?.userId?.let { userId ->
-            privacyViewModel.loadPrivacySettings(userId)
-        }
+        userInfo?.userId?.let { privacyViewModel.loadPrivacySettings(it) }
     }
 
-    // 同步服务器数据到本地
     LaunchedEffect(privacySettings) {
-        if (privacySettings.isNotEmpty()) {
-            localSettings = privacySettings
-        }
+        if (privacySettings.isNotEmpty()) localSettings = privacySettings
     }
 
-    // 显示成功消息
     LaunchedEffect(successMessage) {
         successMessage?.let {
-            // 这里可以显示一个Snackbar
+            snackbarHostState.showSnackbar(it)
             privacyViewModel.clearSuccessMessage()
-            hasChanges = false
         }
     }
 
-    // 显示错误消息
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
-            // 这里可以显示一个Snackbar
+            snackbarHostState.showSnackbar(it)
             privacyViewModel.clearErrorMessage()
         }
     }
 
     Scaffold(
+        containerColor = Background,
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "隐私设置",
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    // 保存按钮
-                    TextButton(
-                        onClick = {
-                            userInfo?.userId?.let { userId ->
-                                privacyViewModel.updatePrivacySettings(userId, localSettings)
-                            }
-                        },
-                        enabled = hasChanges && !isLoading
-                    ) {
-                        Text(
-                            text = "保存",
-                            color = if (hasChanges) PrimaryBlue else Color.Gray
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
+                title = { Text("隐私设置", fontWeight = FontWeight.Bold) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
             )
         },
-        containerColor = Color(0xFFF7F8FA)
+        bottomBar = {
+            Button(
+                onClick = { userInfo?.userId?.let { privacyViewModel.updatePrivacySettings(it, localSettings) } },
+                enabled = hasChanges && !isLoading,
+                modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                else Text("保存更改", fontSize = 18.sp)
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            if (isLoading && localSettings.isEmpty()) {
-                // 加载中
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp)
-                ) {
-                    // 说明文字
-                    item {
+        if (isLoading && localSettings.isEmpty()) {
+            Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+        } else {
+            LazyColumn(Modifier.fillMaxSize().padding(paddingValues), contentPadding = PaddingValues(vertical = 16.dp)) {
+                item {
+                    Column(Modifier.padding(horizontal = 16.dp)) {
                         Text(
-                            text = "管理谁可以查看你的个人信息",
+                            "管理谁可以查看你的个人信息。",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
                         )
-                    }
-
-                    // 隐私设置列表
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = LightBlueSurface
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                        ) {
-                            Column {
-                                localSettings.forEachIndexed { index, setting ->
-                                    PrivacySettingItem(
-                                        setting = setting,
-                                        onClick = { showDialog = setting }
-                                    )
-
-                                    if (index < localSettings.size - 1) {
-                                        HorizontalDivider(
-                                            modifier = Modifier.padding(horizontal = 16.dp),
-                                            color = PrimaryBlue.copy(alpha = 0.1f)
-                                        )
-                                    }
-                                }
+                        Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))) {
+                            localSettings.forEachIndexed { index, setting ->
+                                PrivacySettingItem(setting) { showDialog = setting }
+                                if (index < localSettings.size - 1) HorizontalDivider(Modifier.padding(start = 16.dp), color = Background)
                             }
                         }
                     }
-
-                    // 底部说明
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "注意：\"仅好友可见\"功能即将推出，当前等同于\"私密\"",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(4.dp)
-                        )
-                    }
                 }
             }
         }
     }
 
-    // 选择可见性对话框
-    showDialog?.let { setting ->
-        VisibilitySelectionDialog(
-            setting = setting,
-            onDismiss = { showDialog = null },
-            onConfirm = { newLevel ->
-                // 更新本地设置
-                localSettings = localSettings.map {
-                    if (it.fieldName == setting.fieldName) {
-                        it.copy(visibilityLevel = newLevel)
-                    } else {
-                        it
-                    }
-                }
-                hasChanges = true
-                showDialog = null
-            }
-        )
-    }
-}
-
-/**
- * 隐私设置项
- */
-@Composable
-private fun PrivacySettingItem(
-    setting: PrivacySettingDTO,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = setting.displayName,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+    showDialog?.let {
+        VisibilitySelectionDialog(it, { showDialog = null }) { newLevel ->
+            localSettings = localSettings.map { s -> if (s.fieldName == it.fieldName) s.copy(visibilityLevel = newLevel) else s }
+            showDialog = null
         }
-
-        Text(
-            text = getVisibilityLabel(setting.visibilityLevel),
-            style = MaterialTheme.typography.bodyMedium,
-            color = PrimaryBlue,
-            modifier = Modifier.padding(end = 8.dp)
-        )
-
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .size(20.dp)
-                .graphicsLayer { rotationZ = 180f }
-        )
     }
 }
 
-/**
- * 可见性选择对话框
- */
 @Composable
-private fun VisibilitySelectionDialog(
-    setting: PrivacySettingDTO,
-    onDismiss: () -> Unit,
-    onConfirm: (VisibilityLevel) -> Unit
-) {
+private fun PrivacySettingItem(setting: PrivacySettingDTO, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+        Text(setting.displayName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(getVisibilityLabel(setting.visibilityLevel), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+        }
+    }
+}
+
+@Composable
+private fun VisibilitySelectionDialog(setting: PrivacySettingDTO, onDismiss: () -> Unit, onConfirm: (VisibilityLevel) -> Unit) {
     var selectedLevel by remember { mutableStateOf(setting.visibilityLevel) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("${setting.displayName}可见性") },
+        title = { Text("设置 ${setting.displayName} 可见性", fontWeight = FontWeight.Bold) },
         text = {
             Column {
-                VisibilityOption.options.forEach { option ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedLevel = option.level }
-                            .background(
-                                if (selectedLevel == option.level) PrimaryBlue.copy(alpha = 0.1f)
-                                else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedLevel == option.level,
-                            onClick = { selectedLevel = option.level },
-                            colors = RadioButtonDefaults.colors(
-                                selectedColor = PrimaryBlue
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
+                VisibilityOption.options.forEach {
+                    Row(Modifier.fillMaxWidth().clickable { selectedLevel = it.level }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selectedLevel == it.level, { selectedLevel = it.level }, colors = RadioButtonDefaults.colors(selectedColor = PrimaryBlue))
+                        Spacer(Modifier.width(12.dp))
                         Column {
-                            Text(
-                                text = option.label,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (selectedLevel == option.level) FontWeight.Bold else FontWeight.Normal
-                            )
-                            Text(
-                                text = option.description,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text(it.label, style = MaterialTheme.typography.bodyLarge, fontWeight = if (selectedLevel == it.level) FontWeight.Bold else FontWeight.Normal)
+                            Text(it.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(selectedLevel) }) {
-                Text("确定")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
+        confirmButton = { TextButton({ onConfirm(selectedLevel) }, colors = ButtonDefaults.textButtonColors(contentColor = PrimaryBlue)) { Text("确定") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
     )
 }
 
-/**
- * 获取可见性级别的显示文本
- */
-private fun getVisibilityLabel(level: VisibilityLevel): String {
-    return when (level) {
-        VisibilityLevel.PUBLIC -> "公开"
-        VisibilityLevel.FRIENDS_ONLY -> "仅好友"
-        VisibilityLevel.PRIVATE -> "私密"
-    }
+private fun getVisibilityLabel(level: VisibilityLevel): String = when (level) {
+    VisibilityLevel.PUBLIC -> "公开"
+    VisibilityLevel.FRIENDS_ONLY -> "仅好友"
+    VisibilityLevel.PRIVATE -> "私密"
 }

@@ -16,6 +16,9 @@ val LightBlueSurface = Color(0xFFF0F8FF)
 // A dark blue for text/icons on top of the light blue container.
 val OnLightBlueContainer = Color(0xFF001D36)
 
+// New background color
+val Background = Color(0xFFF7F8FA)
+
 
 // --- Standard Theme Colors (Generated for Material Theme) ---
 
