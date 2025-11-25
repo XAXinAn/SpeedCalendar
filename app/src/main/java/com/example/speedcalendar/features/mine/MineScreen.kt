@@ -209,7 +209,7 @@ private fun SettingsMenu(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
                 SettingsMenuItem(
                     icon = Icons.Outlined.People,
-                    title = "群体设置",
+                    title = "群组设置",
                     onClick = onNavigateToGroupSettings
                 )
             }
