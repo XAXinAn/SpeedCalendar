@@ -56,7 +56,7 @@ fun AddScheduleSheet(onClose: () -> Unit) {
             if (time != null) {
                 time!!.split(':').map { it.toInt() }
             } else {
-                listOf(9, 0) // Default to 9:00
+                listOf(9, 0)
             }
         }
         TimePickerDialog(
@@ -88,7 +88,7 @@ fun AddScheduleSheet(onClose: () -> Unit) {
         },
         bottomBar = {
             Button(
-                onClick = { /* TODO: Save schedule logic */ },
+                onClick = { },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)

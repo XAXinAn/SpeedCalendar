@@ -265,6 +265,5 @@ private fun SettingsMenuItem(icon: ImageVector, title: String, onClick: () -> Un
 @Preview(showBackground = true)
 @Composable
 fun MineScreenPreview() {
-    // You can wrap this with your theme for a better preview
     MineScreen()
 }

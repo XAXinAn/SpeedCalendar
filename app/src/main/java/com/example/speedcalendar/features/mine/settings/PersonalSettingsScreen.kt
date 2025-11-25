@@ -91,7 +91,7 @@ fun PersonalSettingsScreen(
                     SettingsItem(
                         icon = Icons.Outlined.Lock,
                         title = "修改密码",
-                        onClick = { /* TODO: Navigate to change password */ }
+                        onClick = { }
                     )
                 }
             )

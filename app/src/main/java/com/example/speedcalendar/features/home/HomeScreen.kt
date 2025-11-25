@@ -2,8 +2,6 @@ package com.example.speedcalendar.features.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -72,7 +70,6 @@ import java.time.format.TextStyle
 import java.util.Locale
 import java.util.UUID
 
-// Data class for schedule entry
 data class Schedule(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
@@ -89,7 +86,6 @@ fun HomeScreen() {
     var showYearMonthPicker by remember { mutableStateOf(false) }
     var showAddScheduleSheet by remember { mutableStateOf(false) }
 
-    // Hardcoded schedules for demonstration
     val schedules = remember {
         listOf(
             Schedule(title = "与团队成员的技术交流会议", date = LocalDate.now(), time = "14:00 - 15:00", location = "线上会议 - Google Meet"),
@@ -165,9 +161,9 @@ fun HomeScreen() {
                                 },
                                 onDragEnd = {
                                     val threshold = screenWidthPx / 5
-                                    if (dragAmount < -threshold) { // Swiped left
+                                    if (dragAmount < -threshold) {
                                         currentMonth = currentMonth.plusMonths(1)
-                                    } else if (dragAmount > threshold) { // Swiped right
+                                    } else if (dragAmount > threshold) {
                                         currentMonth = currentMonth.minusMonths(1)
                                     }
                                 }
@@ -198,7 +194,6 @@ fun HomeScreen() {
                 Divider(modifier = Modifier.padding(horizontal = 24.dp))
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Schedule List
                 if (selectedDateSchedules.isNotEmpty()) {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 24.dp),
@@ -275,7 +270,7 @@ fun CalendarGrid(
     onDateSelected: (LocalDate) -> Unit
 ) {
     val firstDayOfMonth = yearMonth.atDay(1)
-    val paddingDays = (firstDayOfMonth.dayOfWeek.value - 1) // Monday is 1, Sunday is 7
+    val paddingDays = (firstDayOfMonth.dayOfWeek.value - 1)
 
     val startDate = firstDayOfMonth.minusDays(paddingDays.toLong())
     val numRows = 6
