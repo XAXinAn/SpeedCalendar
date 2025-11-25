@@ -1,14 +1,13 @@
 package com.example.speedcalendar.ui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.Icon
@@ -17,10 +16,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -34,8 +33,8 @@ import com.example.speedcalendar.features.ai.AIScreen
 import com.example.speedcalendar.features.ai.chat.AIChatScreen
 import com.example.speedcalendar.features.home.HomeScreen
 import com.example.speedcalendar.features.mine.MineScreen
-import com.example.speedcalendar.features.mine.settings.PersonalSettingsScreen
 import com.example.speedcalendar.features.mine.settings.EditProfileScreen
+import com.example.speedcalendar.features.mine.settings.PersonalSettingsScreen
 import com.example.speedcalendar.features.mine.settings.PrivacySettingsScreen
 import com.example.speedcalendar.navigation.Screen
 import com.example.speedcalendar.ui.theme.Background
@@ -57,7 +56,7 @@ fun MainScreen() {
 
     val bottomNavItems = listOf(
         BottomNavItem("日历", Screen.Home.route, Icons.Filled.DateRange, Icons.Outlined.DateRange),
-        BottomNavItem("AI助手", Screen.AI.route, Icons.Filled.Chat, Icons.Outlined.ChatBubbleOutline),
+        BottomNavItem("AI助手", Screen.AI.route, Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome),
         BottomNavItem("我的", Screen.Mine.route, Icons.Filled.Person, Icons.Outlined.PersonOutline)
     )
 
@@ -90,13 +89,10 @@ fun MainScreen() {
                                 contentDescription = item.title
                             )
                         },
-                        label = { Text(item.title) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = PrimaryBlue,
-                            selectedTextColor = PrimaryBlue,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            indicatorColor = MaterialTheme.colorScheme.surface
+                            indicatorColor = Color.Transparent
                         )
                     )
                 }
