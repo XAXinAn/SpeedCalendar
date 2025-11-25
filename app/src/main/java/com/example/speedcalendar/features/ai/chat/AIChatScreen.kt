@@ -106,7 +106,7 @@ fun AIChatScreen(
         containerColor = Background,
         topBar = {
             TopAppBar(
-                title = { Text("AI 助手", fontWeight = FontWeight.Bold) },
+                title = { Text("智能工具", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")

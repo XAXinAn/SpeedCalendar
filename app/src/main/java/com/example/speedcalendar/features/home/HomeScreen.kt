@@ -14,6 +14,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -21,12 +22,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -36,6 +46,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +70,16 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
+import java.util.UUID
+
+// Data class for schedule entry
+data class Schedule(
+    val id: String = UUID.randomUUID().toString(),
+    val title: String,
+    val date: LocalDate,
+    val time: String,
+    val location: String
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +88,20 @@ fun HomeScreen() {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var showYearMonthPicker by remember { mutableStateOf(false) }
     var showAddScheduleSheet by remember { mutableStateOf(false) }
+
+    // Hardcoded schedules for demonstration
+    val schedules = remember {
+        listOf(
+            Schedule(title = "与团队成员的技术交流会议", date = LocalDate.now(), time = "14:00 - 15:00", location = "线上会议 - Google Meet"),
+            Schedule(title = "健身", date = LocalDate.now(), time = "18:00 - 19:00", location = "健身房"),
+            Schedule(title = "项目 Deadline", date = LocalDate.now().plusDays(2), time = "全天", location = "居家办公"),
+            Schedule(title = "整理文档", date = LocalDate.now().minusDays(1), time = "10:00 - 11:00", location = "公司会议室 A")
+        )
+    }
+
+    val selectedDateSchedules = remember(selectedDate, schedules) {
+        schedules.filter { it.date == selectedDate }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (showYearMonthPicker) {
@@ -81,35 +117,27 @@ fun HomeScreen() {
 
         Scaffold(
             containerColor = Background,
+            topBar = {
+                CalendarTopAppBar(
+                    yearMonth = currentMonth,
+                    onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
+                    onNextMonth = { currentMonth = currentMonth.plusMonths(1) },
+                    onTodayClick = {
+                        currentMonth = YearMonth.now()
+                        selectedDate = LocalDate.now()
+                    },
+                    onYearMonthClick = { showYearMonthPicker = true }
+                )
+            },
             floatingActionButton = {
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    AnimatedVisibility(
-                        visible = currentMonth != YearMonth.now() || selectedDate != LocalDate.now(),
-                        enter = fadeIn(),
-                        exit = fadeOut()
-                    ) {
-                        FloatingActionButton(
-                            onClick = {
-                                currentMonth = YearMonth.now()
-                                selectedDate = LocalDate.now()
-                            },
-                            containerColor = Color.White,
-                            contentColor = PrimaryBlue,
-                            shape = CircleShape,
-                            elevation = FloatingActionButtonDefaults.elevation(4.dp, 4.dp)
-                        ) {
-                            Icon(Icons.Default.CalendarToday, contentDescription = "回到今天")
-                        }
-                    }
-                    FloatingActionButton(
-                        onClick = { showAddScheduleSheet = true },
-                        containerColor = PrimaryBlue,
-                        contentColor = Color.White,
-                        shape = CircleShape,
-                        elevation = FloatingActionButtonDefaults.elevation(4.dp, 4.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "添加")
-                    }
+                FloatingActionButton(
+                    onClick = { showAddScheduleSheet = true },
+                    containerColor = PrimaryBlue,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    elevation = FloatingActionButtonDefaults.elevation(4.dp, 4.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "添加")
                 }
             },
             floatingActionButtonPosition = FabPosition.End
@@ -123,14 +151,6 @@ fun HomeScreen() {
                 val screenWidthPx = with(LocalDensity.current) {
                     LocalConfiguration.current.screenWidthDp.dp.toPx()
                 }
-
-                CalendarHeader(
-                    yearMonth = currentMonth,
-                    onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
-                    onNextMonth = { currentMonth = currentMonth.plusMonths(1) },
-                    onYearMonthClick = { showYearMonthPicker = true }
-                )
-                Spacer(modifier = Modifier.height(24.dp))
 
                 var dragAmount by remember { mutableStateOf(0f) }
 
@@ -168,8 +188,29 @@ fun HomeScreen() {
                         CalendarGrid(
                             yearMonth = month,
                             selectedDate = selectedDate,
+                            schedules = schedules,
                             onDateSelected = { selectedDate = it }
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Divider(modifier = Modifier.padding(horizontal = 24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Schedule List
+                if (selectedDateSchedules.isNotEmpty()) {
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(selectedDateSchedules) { schedule ->
+                            ScheduleItem(schedule = schedule)
+                        }
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("今天没有日程安排", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -185,36 +226,44 @@ fun HomeScreen() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalendarHeader(
+fun CalendarTopAppBar(
     yearMonth: YearMonth,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    onTodayClick: () -> Unit,
     onYearMonthClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        IconButton(onClick = onPreviousMonth) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "上个月", tint = PrimaryBlue)
-        }
-        Text(
-            text = "${yearMonth.year}年 ${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.CHINESE)}",
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .clickable(remember { MutableInteractionSource() }, null, onClick = onYearMonthClick)
+    TopAppBar(
+        title = {
+            Text(
+                text = "${yearMonth.year}年 ${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.CHINESE)}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(remember { MutableInteractionSource() }, null, onClick = onYearMonthClick)
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = onPreviousMonth) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "上个月", tint = PrimaryBlue)
+            }
+        },
+        actions = {
+            IconButton(onClick = onTodayClick) {
+                Icon(Icons.Default.Today, contentDescription = "回到今天", tint = PrimaryBlue)
+            }
+            IconButton(onClick = onNextMonth) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "下个月", tint = PrimaryBlue)
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Background
         )
-        IconButton(onClick = onNextMonth) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "下个月", tint = PrimaryBlue)
-        }
-    }
+    )
 }
 
 @Composable
@@ -222,6 +271,7 @@ fun CalendarGrid(
     modifier: Modifier = Modifier,
     yearMonth: YearMonth,
     selectedDate: LocalDate?,
+    schedules: List<Schedule>,
     onDateSelected: (LocalDate) -> Unit
 ) {
     val firstDayOfMonth = yearMonth.atDay(1)
@@ -254,6 +304,7 @@ fun CalendarGrid(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     weekDates.forEach { date ->
                         val isCurrentMonth = YearMonth.from(date) == yearMonth
+                        val hasSchedule = schedules.any { it.date == date } && isCurrentMonth
 
                         Box(
                             modifier = Modifier
@@ -276,21 +327,88 @@ fun CalendarGrid(
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = date.dayOfMonth.toString(),
-                                    fontWeight = if (isSelected && isCurrentMonth) FontWeight.Bold else FontWeight.Normal,
-                                    color = when {
-                                        isSelected && isCurrentMonth -> Color.White
-                                        isToday && isCurrentMonth -> PrimaryBlue
-                                        isCurrentMonth -> MaterialTheme.colorScheme.onBackground
-                                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = date.dayOfMonth.toString(),
+                                        fontWeight = if (isSelected && isCurrentMonth) FontWeight.Bold else FontWeight.Normal,
+                                        color = when {
+                                            isSelected && isCurrentMonth -> Color.White
+                                            isToday && isCurrentMonth -> PrimaryBlue
+                                            isCurrentMonth -> MaterialTheme.colorScheme.onBackground
+                                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                        }
+                                    )
+                                    if (hasSchedule) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .size(4.dp)
+                                                .background(
+                                                    color = if (isSelected && isCurrentMonth) Color.White else PrimaryBlue,
+                                                    shape = CircleShape
+                                                )
+                                        )
                                     }
-                                )
+                                }
                             }
                         }
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun ScheduleItem(schedule: Schedule, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = schedule.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = "Time",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = schedule.time,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = schedule.location,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
