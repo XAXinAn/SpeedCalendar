@@ -1,10 +1,13 @@
 package com.example.speedcalendar.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
 // Dark theme colors, ensuring no purple tints
@@ -35,6 +38,7 @@ private val LightColorScheme = lightColorScheme(
     onSurface = Color(0xFF1C1B1F)
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpeedCalendarTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -43,9 +47,11 @@ fun SpeedCalendarTheme(
     // Dynamic color is disabled to ensure consistent branding
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalRippleConfiguration provides null) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }
