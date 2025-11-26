@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.speedcalendar.data.model.Schedule
 import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 import com.example.speedcalendar.viewmodel.HomeViewModel
@@ -72,18 +73,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
-
-data class Schedule(
-    val scheduleId: String,
-    val userId: String,
-    val title: String,
-    val scheduleDate: String,
-    val startTime: String?,
-    val endTime: String?,
-    val location: String?,
-    val isAllDay: Boolean,
-    val createdAt: Long
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

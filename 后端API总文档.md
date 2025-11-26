@@ -1,163 +1,328 @@
-# SpeedCalendar 后端 API 总文档
+# **SpeedCalendar 后端API文档**
 
-**版本: 1.0**
+## **1. 认证 (Authentication)**
 
-## 1. 概述
+### **1.1 用户注册**
 
-本文档是 SpeedCalendar App 所有后端 API 的权威参考。所有接口都遵循统一的结构和规范。
+*   **URL**: `/api/auth/register`
+*   **Method**: `POST`
+*   **Description**: 注册一个新用户。
+*   **Body**:
+    ```json
+    {
+      "username": "string",
+      "email": "string",
+      "password": "string"
+    }
+    ```
+*   **Response**:
+    *   `201 Created`: 注册成功。
+        ```json
+        {
+          "message": "User registered successfully"
+        }
+        ```
+    *   `400 Bad Request`: 输入无效。
+    *   `409 Conflict`: 用户名或邮箱已存在。
 
-### 1.1. 基础信息
+### **1.2 用户登录**
 
-- **根路径 (Base URL)**: `http://10.0.2.2:8080/api` (此为 Android 模拟器访问地址)
-- **认证方式**: 所有需要授权的接口，都需要在 HTTP Header 中传递 `Authorization: Bearer <token>`。
+*   **URL**: `/api/auth/login`
+*   **Method**: `POST`
+*   **Description**: 用户登录并获取JWT。
+*   **Body**:
+    ```json
+    {
+      "email": "string",
+      "password": "string"
+    }
+    ```
+*   **Response**:
+    *   `200 OK`: 登录成功。
+        ```json
+        {
+          "token": "string (JWT)",
+          "user": {
+            "userId": "string",
+            "username": "string",
+            "email": "string",
+            "avatarUrl": "string"
+          }
+        }
+        ```
+    *   `401 Unauthorized`: 凭证无效。
 
-### 1.2. 统一响应结构
+## **2. 日程 (Schedules)**
 
-所有 API 的响应都遵循以下 JSON 格式：
+### **2.1 获取指定月份的日程**
 
-```json
-{
-  "code": 200,
-  "message": "响应消息",
-  "data": { ... } // 或 [ ... ]
-}
-```
+*   **URL**: `/api/schedules`
+*   **Method**: `GET`
+*   **Description**: 获取指定用户在某年某月的所有日程。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Query Parameters**:
+    *   `year`: `integer` (e.g., 2024)
+    *   `month`: `integer` (e.g., 7)
+*   **Response**:
+    *   `200 OK`:
+        ```json
+        [
+          {
+            "scheduleId": "string",
+            "userId": "string",
+            "title": "string",
+            "scheduleDate": "string (YYYY-MM-DD)",
+            "startTime": "string (HH:mm)",
+            "endTime": "string (HH:mm)",
+            "location": "string",
+            "isAllDay": "boolean",
+            "createdAt": "long (timestamp)"
+          }
+        ]
+        ```
 
-| 字段 | 类型 | 描述 |
-| :--- | :--- | :--- |
-| `code` | Integer | 业务状态码，`200` 或 `201` 表示成功 |
-| `message`| String | 对当前响应的文字描述 |
-| `data` | Object/Array | 实际的响应数据 |
+### **2.2 新增日程**
 
-### 1.3. HTTP 状态码
+*   **URL**: `/api/schedules`
+*   **Method**: `POST`
+*   **Description**: 为当前用户创建一个新的日程。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Body**:
+    ```json
+    {
+      "title": "string",
+      "scheduleDate": "string (YYYY-MM-DD)",
+      "startTime": "string (HH:mm)",
+      "endTime": "string (HH:mm)",
+      "location": "string",
+      "isAllDay": "boolean"
+    }
+    ```
+*   **Response**:
+    *   `201 Created`:
+        ```json
+        {
+          "scheduleId": "string",
+          "userId": "string",
+          "title": "string",
+          "scheduleDate": "string (YYYY-MM-DD)",
+          "startTime": "string (HH:mm)",
+          "endTime": "string (HH:mm)",
+          "location": "string",
+          "isAllDay": "boolean",
+          "createdAt": "long (timestamp)"
+        }
+        ```
 
-- `200 OK`: 请求成功。
-- `201 Created`: 资源创建成功 (例如，添加新日程)。
-- `204 No Content`: 操作成功，但响应体中无内容 (例如，删除成功)。
-- `400 Bad Request`: 客户端请求参数错误。
-- `401 Unauthorized`: 未提供或提供了无效的认证 Token。
-- `404 Not Found`: 请求的资源不存在。
-- `500 Internal Server Error`: 服务器内部发生未知错误。
+### **2.3 更新日程**
 
----
+*   **URL**: `/api/schedules/{scheduleId}`
+*   **Method**: `PUT`
+*   **Description**: 更新一个已存在的日程。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Path Parameters**:
+    *   `scheduleId`: `string`
+*   **Body**:
+    ```json
+    {
+      "title": "string",
+      "scheduleDate": "string (YYYY-MM-DD)",
+      "startTime": "string (HH:mm)",
+      "endTime": "string (HH:mm)",
+      "location": "string",
+      "isAllDay": "boolean"
+    }
+    ```
+*   **Response**:
+    *   `200 OK`:
+        ```json
+        {
+          "scheduleId": "string",
+          // ... (updated schedule object)
+        }
+        ```
+    *   `404 Not Found`: 日程不存在。
 
-## 2. 用户认证模块 (`/auth`)
+### **2.4 删除日程**
 
-此模块负责用户的登录和注册。
+*   **URL**: `/api/schedules/{scheduleId}`
+*   **Method**: `DELETE`
+*   **Description**: 删除一个日程。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Path Parameters**:
+    *   `scheduleId`: `string`
+*   **Response**:
+    *   `204 No Content`: 删除成功。
+    *   `404 Not Found`: 日程不存在。
 
-### 2.1. 发送短信验证码
+## **3. AI 聊天 (AI Chat)**
 
-- **路径**: `/auth/send-code`
-- **方法**: `POST`
+### **3.1 获取聊天会话列表**
 
-**请求体:**
-```json
-{
-  "phone": "13800138000"
-}
-```
+*   **URL**: `/api/ai/chat/sessions`
+*   **Method**: `GET`
+*   **Description**: 获取指定用户的所有聊天会话。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Query Parameters**:
+    *   `userId`: `string`
+*   **Response**:
+    *   `200 OK`:
+        ```json
+        [
+          {
+            "id": "string",
+            "title": "string",
+            "lastMessage": "string",
+            "timestamp": "long"
+          }
+        ]
+        ```
 
-**成功响应 (200 OK):**
-```json
-{
-  "code": 200,
-  "message": "验证码已发送，请注意查收",
-  "data": null
-}
-```
+### **3.2 发送消息**
 
-### 2.2. 手机号验证码登录
+*   **URL**: `/api/ai/chat/message`
+*   **Method**: `POST`
+*   **Description**: 发送一条消息到指定的会话。如果 `sessionId` 为空，则创建一个新会话。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Body**:
+    ```json
+    {
+      "message": "string",
+      "sessionId": "string",
+      "userId": "string"
+    }
+    ```
+*   **Response**:
+    *   `200 OK`:
+        ```json
+        {
+          "sessionId": "string",
+          "message": "string",
+          "timestamp": "long"
+        }
+        ```
 
-- **路径**: `/auth/login/phone`
-- **方法**: `POST`
+### **3.3 获取聊天记录**
 
-**请求体:**
-```json
-{
-  "phone": "13800138000",
-  "code": "123456"
-}
-```
+*   **URL**: `/api/ai/chat/history/{sessionId}`
+*   **Method**: `GET`
+*   **Description**: 获取指定会话的所有聊天记录。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Path Parameters**:
+    *   `sessionId`: `string`
+*   **Response**:
+    *   `200 OK`:
+        ```json
+        {
+          "messages": [
+            {
+              "id": "string",
+              "content": "string",
+              "role": "string (user/ai)",
+              "timestamp": "long"
+            }
+          ]
+        }
+        ```
 
-**成功响应 (200 OK):**
-```json
-{
-  "code": 200,
-  "message": "登录成功",
-  "data": { ... } // 包含 token 和 userInfo 的对象
-}
-```
+### **3.4 创建新会话**
 
----
+*   **URL**: `/api/ai/chat/sessions`
+*   **Method**: `POST`
+*   **Description**: 创建一个新的聊天会话。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Body**:
+    ```json
+    {
+      "userId": "string"
+    }
+    ```
+*   **Response**:
+    *   `201 Created`:
+        ```json
+        {
+          "id": "string",
+          "title": "string",
+          "lastMessage": "",
+          "timestamp": "long"
+        }
+        ```
 
-## 3. 日程管理模块 (`/schedules`)
+## **4. 用户 (Users)**
 
-此模块负责所有与用户日程相关的操作。
+### **4.1 获取用户信息**
 
-### 3.1. 添加新日程
+*   **URL**: `/api/users/{userId}`
+*   **Method**: `GET`
+*   **Description**: 获取指定用户的详细信息。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Path Parameters**:
+    *   `userId`: `string`
+*   **Response**:
+    *   `200 OK`:
+        ```json
+        {
+          "userId": "string",
+          "username": "string",
+          "email": "string",
+          "avatarUrl": "string"
+        }
+        ```
+    *   `404 Not Found`: 用户不存在。
 
-- **路径**: `/schedules`
-- **方法**: `POST`
-- **认证**: 需要
+### **4.2 更新用户信息**
 
-**成功响应 (201 Created):**
-```json
-{
-  "code": 201,
-  "message": "日程创建成功",
-  "data": { ... } // 返回完整的日程对象
-}
-```
+*   **URL**: `/api/users/{userId}`
+*   **Method**: `PUT`
+*   **Description**: 更新用户的个人资料信息。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Path Parameters**:
+    *   `userId`: `string`
+*   **Body**:
+    ```json
+    {
+      "username": "string"
+    }
+    ```
+*   **Response**:
+    *   `200 OK`:
+        ```json
+        {
+          "userId": "string",
+          "username": "string",
+          "email": "string",
+          "avatarUrl": "string"
+        }
+        ```
+    *   `404 Not Found`: 用户不存在。
 
-### 3.2. 获取指定月份的日程列表
+### **4.3 上传头像**
 
-- **路径**: `/schedules/user/{userId}`
-- **方法**: `GET`
-- **认证**: 需要
-
-**请求示例:** `GET /schedules/user/user_12345?month=2024-09`
-
-**成功响应 (200 OK):**
-```json
-{
-  "code": 200,
-  "message": "获取成功",
-  "data": [ ... ] // 日程对象数组
-}
-```
-
-### 3.3. 更新日程
-
-- **路径**: `/schedules/{scheduleId}`
-- **方法**: `PUT`
-- **认证**: 需要
-
-**请求体:** 包含一个或多个要更新的字段的日程对象。
-
-**成功响应 (200 OK):**
-```json
-{
-  "code": 200,
-  "message": "更新成功",
-  "data": { ... } // 返回更新后的完整日程对象
-}
-```
-
-### 3.4. 删除日程
-
-- **路径**: `/schedules/{scheduleId}`
-- **方法**: `DELETE`
-- **认证**: 需要
-
-**请求示例:** `DELETE /schedules/schedule-uuid-abc-123`
-
-**成功响应 (204 No Content):** 服务器将返回一个没有内容的 `204` 响应。
-
----
-
-## 4. AI 助手模块 (`/ai/chat`)
-
-此模块负责与“极速精灵”AI 助手的所有交互。
-
-(此模块的详细接口...)
-
+*   **URL**: `/api/users/{userId}/avatar`
+*   **Method**: `POST`
+*   **Description**: 上传用户的头像图片。
+*   **Headers**:
+    *   `Authorization`: `Bearer <JWT>`
+*   **Path Parameters**:
+    *   `userId`: `string`
+*   **Body**:
+    *   `multipart/form-data` with a file part named "avatar".
+*   **Response**:
+    *   `200 OK`:
+        ```json
+        {
+          "avatarUrl": "string"
+        }
+        ```
+    *   `400 Bad Request`: 无效的文件。
+    *   `404 Not Found`: 用户不存在。

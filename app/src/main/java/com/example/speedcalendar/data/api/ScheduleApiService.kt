@@ -1,23 +1,34 @@
 package com.example.speedcalendar.data.api
 
 import com.example.speedcalendar.data.model.AddScheduleRequest
-import com.example.speedcalendar.data.model.ApiResponse
-import com.example.speedcalendar.features.home.Schedule
-import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Path
-import retrofit2.http.Query
+import com.example.speedcalendar.data.model.Schedule
+import retrofit2.http.*
 
 interface ScheduleApiService {
 
-    @GET("api/schedules/user/{userId}")
+    @GET("schedules")
     suspend fun getSchedules(
-        @Path("userId") userId: String,
-        @Query("month") month: String
-    ): Response<ApiResponse<List<Schedule>>>
+        @Header("Authorization") token: String,
+        @Query("year") year: Int,
+        @Query("month") month: Int
+    ): List<Schedule>
 
-    @POST("api/schedules")
-    suspend fun addSchedule(@Body request: AddScheduleRequest): Response<ApiResponse<Schedule>>
+    @POST("schedules")
+    suspend fun addSchedule(
+        @Header("Authorization") token: String,
+        @Body schedule: AddScheduleRequest
+    ): Schedule
+
+    @PUT("schedules/{scheduleId}")
+    suspend fun updateSchedule(
+        @Header("Authorization") token: String,
+        @Path("scheduleId") scheduleId: String,
+        @Body schedule: AddScheduleRequest
+    ): Schedule
+
+    @DELETE("schedules/{scheduleId}")
+    suspend fun deleteSchedule(
+        @Header("Authorization") token: String,
+        @Path("scheduleId") scheduleId: String
+    )
 }

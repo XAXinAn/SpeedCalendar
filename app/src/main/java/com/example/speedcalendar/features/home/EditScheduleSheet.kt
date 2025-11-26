@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.speedcalendar.data.model.Schedule
 import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 import com.example.speedcalendar.viewmodel.HomeViewModel

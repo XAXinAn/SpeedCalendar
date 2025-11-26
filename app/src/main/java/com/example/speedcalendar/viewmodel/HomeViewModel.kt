@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.speedcalendar.data.api.RetrofitClient
 import com.example.speedcalendar.data.local.UserPreferences
 import com.example.speedcalendar.data.model.AddScheduleRequest
-import com.example.speedcalendar.features.home.Schedule
+import com.example.speedcalendar.data.model.Schedule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,50 +30,95 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val error: StateFlow<String?> = _error.asStateFlow()
 
     fun loadSchedules(yearMonth: YearMonth) {
-        // 暂时使用写死的数据
-        val today = LocalDate.now()
-        val hardcodedSchedules = listOf(
-            Schedule(
-                scheduleId = "1",
-                userId = "demo-user",
-                title = "与团队成员的技术交流会议",
-                scheduleDate = today.toString(),
-                startTime = "14:00",
-                endTime = "15:00",
-                location = "线上会议 - Google Meet",
-                isAllDay = false,
-                createdAt = System.currentTimeMillis()
-            ),
-            Schedule(
-                scheduleId = "2",
-                userId = "demo-user",
-                title = "健身",
-                scheduleDate = today.toString(),
-                startTime = "18:00",
-                endTime = "19:00",
-                location = "健身房",
-                isAllDay = false,
-                createdAt = System.currentTimeMillis()
-            )
-        )
-        _schedules.value = hardcodedSchedules
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val token = userPreferences.getAccessToken() // aiexpert: get token
+                if (token != null) {
+                    _schedules.value = scheduleApiService.getSchedules("Bearer $token", yearMonth.year, yearMonth.monthValue)
+                } else {
+                    _error.value = "用户未登录"
+                }
+            } catch (e: Exception) {
+                _error.value = "无法加载日程: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
     fun addSchedule(title: String, date: LocalDate, time: String?, location: String?, onSuccess: () -> Unit) {
-        // TODO: 当后端准备好后，这里也需要连接到 addSchedule API
-        onSuccess()
+        viewModelScope.launch {
+            try {
+                val token = userPreferences.getAccessToken()
+                if (token != null) {
+                    val newSchedule = scheduleApiService.addSchedule(
+                        "Bearer $token",
+                        AddScheduleRequest(
+                            title = title,
+                            scheduleDate = date.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                            startTime = time,
+                            endTime = null, // TODO: Add end time support
+                            location = location,
+                            isAllDay = time == null
+                        )
+                    )
+                    _schedules.value = _schedules.value + newSchedule
+                    onSuccess()
+                } else {
+                    _error.value = "用户未登录"
+                }
+            } catch (e: Exception) {
+                _error.value = "添加日程失败: ${e.message}"
+            }
+        }
     }
 
     fun updateSchedule(schedule: Schedule, onSuccess: () -> Unit) {
-        _schedules.value = _schedules.value.map {
-            if (it.scheduleId == schedule.scheduleId) schedule else it
+        viewModelScope.launch {
+            try {
+                val token = userPreferences.getAccessToken()
+                if (token != null) {
+                    val updatedSchedule = scheduleApiService.updateSchedule(
+                        "Bearer $token",
+                        schedule.scheduleId,
+                        AddScheduleRequest(
+                            title = schedule.title,
+                            scheduleDate = schedule.scheduleDate,
+                            startTime = schedule.startTime,
+                            endTime = schedule.endTime,
+                            location = schedule.location,
+                            isAllDay = schedule.isAllDay
+                        )
+                    )
+                    _schedules.value = _schedules.value.map {
+                        if (it.scheduleId == updatedSchedule.scheduleId) updatedSchedule else it
+                    }
+                    onSuccess()
+                } else {
+                    _error.value = "用户未登录"
+                }
+            } catch (e: Exception) {
+                _error.value = "更新日程失败: ${e.message}"
+            }
         }
-        onSuccess()
     }
 
     fun deleteSchedule(scheduleId: String, onSuccess: () -> Unit) {
-        _schedules.value = _schedules.value.filterNot { it.scheduleId == scheduleId }
-        onSuccess()
+        viewModelScope.launch {
+            try {
+                val token = userPreferences.getAccessToken()
+                if (token != null) {
+                    scheduleApiService.deleteSchedule("Bearer $token", scheduleId)
+                    _schedules.value = _schedules.value.filterNot { it.scheduleId == scheduleId }
+                    onSuccess()
+                } else {
+                    _error.value = "用户未登录"
+                }
+            } catch (e: Exception) {
+                _error.value = "删除日程失败: ${e.message}"
+            }
+        }
     }
 
     fun clearError() {
