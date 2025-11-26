@@ -16,6 +16,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
     }
 
     buildTypes {
@@ -36,6 +39,21 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        // 自动打包 C++ 标准库
+        jniLibs {
+            pickFirsts += listOf("**/libc++_shared.so")
+        }
+    }
+    // 配置使用系统的 C++ 标准库
+    externalNativeBuild {
+        cmake {
+            // 如果使用 CMake，这会自动打包 libc++_shared.so
+        }
     }
 }
 
@@ -65,6 +83,9 @@ dependencies {
 
     // DataStore (用于缓存)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // PaddleOCR4Android（方案一）
+    implementation("com.github.equationl:paddleocr4android:v1.2.9")
 
 
     testImplementation(libs.junit)

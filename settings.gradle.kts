@@ -24,6 +24,8 @@ dependencyResolutionManagement {
         // 官方仓库（通过代理）
         google()
         mavenCentral()
+        // JitPack 仓库（用于 paddleocr4android）
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

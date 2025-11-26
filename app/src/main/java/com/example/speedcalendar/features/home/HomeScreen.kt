@@ -214,6 +214,7 @@ fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
         ) {
             AddScheduleSheet(
                 homeViewModel = homeViewModel,
+                selectedDate = selectedDate,
                 onClose = { showAddScheduleSheet = false }
             )
         }

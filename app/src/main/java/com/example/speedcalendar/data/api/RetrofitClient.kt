@@ -17,8 +17,8 @@ object RetrofitClient {
      * 真机 + USB 调试 + adb reverse 使用 localhost
      * 真机访问需要使用主机的实际IP地址
      */
-    //private const val BASE_URL = "http://localhost:8080/api/"
-    private const val BASE_URL = "http://10.0.2.2:8080/api/"
+    private const val BASE_URL = "http://localhost:8080/api/"
+    //private const val BASE_URL = "http://10.0.2.2:8080/api/"
 
     /**
      * OkHttp客户端

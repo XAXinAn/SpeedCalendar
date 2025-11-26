@@ -35,7 +35,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val token = userPreferences.getAccessToken() // aiexpert: get token
                 if (token != null) {
-                    _schedules.value = scheduleApiService.getSchedules("Bearer $token", yearMonth.year, yearMonth.monthValue)
+                    val response = scheduleApiService.getSchedules("Bearer $token", yearMonth.year, yearMonth.monthValue)
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse != null && apiResponse.code == 200) {
+                            _schedules.value = apiResponse.data ?: emptyList()
+                        } else {
+                            _error.value = apiResponse?.message ?: "获取日程失败"
+                        }
+                    } else {
+                        _error.value = "网络请求失败: ${response.code()}"
+                    }
                 } else {
                     _error.value = "用户未登录"
                 }
@@ -52,7 +62,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val token = userPreferences.getAccessToken()
                 if (token != null) {
-                    val newSchedule = scheduleApiService.addSchedule(
+                    val response = scheduleApiService.addSchedule(
                         "Bearer $token",
                         AddScheduleRequest(
                             title = title,
@@ -63,8 +73,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             isAllDay = time == null
                         )
                     )
-                    _schedules.value = _schedules.value + newSchedule
-                    onSuccess()
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse != null && apiResponse.code == 200 && apiResponse.data != null) {
+                            _schedules.value = _schedules.value + apiResponse.data
+                            onSuccess()
+                        } else {
+                            _error.value = apiResponse?.message ?: "添加日程失败"
+                        }
+                    } else {
+                        _error.value = "网络请求失败: ${response.code()}"
+                    }
                 } else {
                     _error.value = "用户未登录"
                 }
@@ -79,7 +98,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val token = userPreferences.getAccessToken()
                 if (token != null) {
-                    val updatedSchedule = scheduleApiService.updateSchedule(
+                    val response = scheduleApiService.updateSchedule(
                         "Bearer $token",
                         schedule.scheduleId,
                         AddScheduleRequest(
@@ -91,10 +110,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             isAllDay = schedule.isAllDay
                         )
                     )
-                    _schedules.value = _schedules.value.map {
-                        if (it.scheduleId == updatedSchedule.scheduleId) updatedSchedule else it
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse != null && apiResponse.code == 200 && apiResponse.data != null) {
+                            _schedules.value = _schedules.value.map {
+                                if (it.scheduleId == apiResponse.data.scheduleId) apiResponse.data else it
+                            }
+                            onSuccess()
+                        } else {
+                            _error.value = apiResponse?.message ?: "更新日程失败"
+                        }
+                    } else {
+                        _error.value = "网络请求失败: ${response.code()}"
                     }
-                    onSuccess()
                 } else {
                     _error.value = "用户未登录"
                 }
@@ -109,9 +137,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val token = userPreferences.getAccessToken()
                 if (token != null) {
-                    scheduleApiService.deleteSchedule("Bearer $token", scheduleId)
-                    _schedules.value = _schedules.value.filterNot { it.scheduleId == scheduleId }
-                    onSuccess()
+                    val response = scheduleApiService.deleteSchedule("Bearer $token", scheduleId)
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse != null && apiResponse.code == 200) {
+                            _schedules.value = _schedules.value.filterNot { it.scheduleId == scheduleId }
+                            onSuccess()
+                        } else {
+                            _error.value = apiResponse?.message ?: "删除日程失败"
+                        }
+                    } else {
+                        _error.value = "网络请求失败: ${response.code()}"
+                    }
                 } else {
                     _error.value = "用户未登录"
                 }

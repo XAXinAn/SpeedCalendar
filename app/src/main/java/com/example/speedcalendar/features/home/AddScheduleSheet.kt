@@ -47,12 +47,15 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddScheduleSheet(homeViewModel: HomeViewModel, onClose: () -> Unit) {
+fun AddScheduleSheet(
+    homeViewModel: HomeViewModel,
+    selectedDate: LocalDate,
+    onClose: () -> Unit
+) {
     var title by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var time by remember { mutableStateOf<String?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
-    val selectedDate = LocalDate.now() // Or pass it as a parameter
 
     if (showTimePicker) {
         val (initialHour, initialMinute) = remember(time) {

@@ -31,6 +31,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.speedcalendar.features.ai.AIScreen
 import com.example.speedcalendar.features.ai.chat.AIChatScreen
+import com.example.speedcalendar.features.ai.ocr.OcrScreen
 import com.example.speedcalendar.features.home.HomeScreen
 import com.example.speedcalendar.features.mine.MineScreen
 import com.example.speedcalendar.features.mine.settings.EditProfileScreen
@@ -110,8 +111,14 @@ fun MainScreen() {
                     AIScreen(
                         onNavigateToChat = { initialMessage ->
                             navController.navigate(Screen.AIChat.createRoute(initialMessage))
+                        },
+                        onNavigateToOcr = {
+                            navController.navigate(Screen.OCR.route)
                         }
                     )
+                }
+                composable(Screen.OCR.route) {
+                    OcrScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
                     route = Screen.AIChat.route,

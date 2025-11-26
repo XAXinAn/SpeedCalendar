@@ -60,7 +60,8 @@ data class AITool(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AIScreen(
-    onNavigateToChat: (String?) -> Unit = {}
+    onNavigateToChat: (String?) -> Unit = {},
+    onNavigateToOcr: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -138,7 +139,7 @@ fun AIScreen(
                         if (tool.isAvailable) {
                             when (tool.id) {
                                 "chat" -> onNavigateToChat(null)
-                                "ocr" -> { /* TODO: Navigate to OCR */ }
+                                "ocr" -> onNavigateToOcr()
                                 "floating_window" -> {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
                                         val intent = Intent(
