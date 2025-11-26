@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
@@ -37,6 +38,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -86,13 +89,11 @@ fun AIChatScreen(
     onBack: () -> Unit = {},
     viewModel: AIChatViewModel = viewModel()
 ) {
-    val userId = "demo-user-id" // TODO: Replace with actual user ID from AuthViewModel
-
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(userId) {
-        viewModel.loadSessions(userId)
+    LaunchedEffect(Unit) {
+        viewModel.loadSessions()
     }
 
     ModalNavigationDrawer(
@@ -123,8 +124,6 @@ fun AIChatContent(
     initialMessage: String?,
     onMenuClick: () -> Unit
 ) {
-    val userId = "demo-user-id"
-
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -133,10 +132,11 @@ fun AIChatContent(
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(initialMessage) {
         if (!initialMessage.isNullOrEmpty() && messages.isEmpty()) {
-            viewModel.sendMessage(initialMessage, userId) {
+            viewModel.sendMessage(initialMessage) {
                 coroutineScope.launch {
                     if (messages.isNotEmpty()) {
                         listState.animateScrollToItem(messages.size - 1)
@@ -146,15 +146,17 @@ fun AIChatContent(
         }
     }
 
-    error?.let {
-        LaunchedEffect(it) {
-            // TODO: Show a snackbar or toast for the error
+    // 显示错误消息（如用户未登录提示）
+    LaunchedEffect(error) {
+        error?.let {
+            snackbarHostState.showSnackbar(it)
             viewModel.clearError()
         }
     }
 
     Scaffold(
         containerColor = Background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("极速精灵", fontWeight = FontWeight.Bold) },
@@ -178,7 +180,7 @@ fun AIChatContent(
                     if (inputText.isNotBlank()) {
                         val messageToSend = inputText
                         inputText = ""
-                        viewModel.sendMessage(messageToSend, userId) {
+                        viewModel.sendMessage(messageToSend) {
                             coroutineScope.launch {
                                 if (messages.isNotEmpty()) {
                                     listState.animateScrollToItem(messages.size - 1)
@@ -215,7 +217,6 @@ fun ChatHistoryDrawer(
     viewModel: AIChatViewModel,
     onSessionClick: (String) -> Unit
 ) {
-    val userId = "demo-user-id"
     val sessions by viewModel.sessions.collectAsState()
     val currentSessionId by viewModel.currentSessionId.collectAsState()
 
@@ -231,7 +232,7 @@ fun ChatHistoryDrawer(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("聊天记录", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                IconButton(onClick = { viewModel.createNewSession(userId) }) {
+                IconButton(onClick = { viewModel.createNewSession() }) {
                     Icon(Icons.Default.Add, contentDescription = "新建聊天")
                 }
             }
@@ -340,12 +341,14 @@ private fun MessageBubble(message: Message) {
             color = if (isUser) PrimaryBlue else MaterialTheme.colorScheme.surface,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
-            Text(
-                text = message.content,
-                color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
-                fontSize = 15.sp,
-                modifier = Modifier.padding(vertical = 10.dp, horizontal = 14.dp)
-            )
+            SelectionContainer {
+                Text(
+                    text = message.content,
+                    color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
+                    fontSize = 15.sp,
+                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 14.dp)
+                )
+            }
         }
     }
 }

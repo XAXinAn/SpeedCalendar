@@ -1,10 +1,11 @@
 package com.example.speedcalendar.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.speedcalendar.data.api.RetrofitClient
+import com.example.speedcalendar.data.local.UserPreferences
 import com.example.speedcalendar.data.model.ChatMessageRequest
-import com.example.speedcalendar.data.model.CreateSessionRequest
 import com.example.speedcalendar.features.ai.chat.Message
 import com.example.speedcalendar.features.ai.chat.MessageRole
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,9 +20,18 @@ data class ChatSession(
     val timestamp: Long
 )
 
-class AIChatViewModel : ViewModel() {
+class AIChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val apiService = RetrofitClient.aiChatApiService
+    private val userPreferences = UserPreferences.getInstance(application)
+
+    /**
+     * 获取带有 Bearer 前缀的 Authorization Token
+     */
+    private fun getAuthToken(): String? {
+        val token = userPreferences.getAccessToken()
+        return if (token != null) "Bearer $token" else null
+    }
 
     private val _sessions = MutableStateFlow<List<ChatSession>>(emptyList())
     val sessions: StateFlow<List<ChatSession>> = _sessions.asStateFlow()
@@ -38,11 +48,20 @@ class AIChatViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    fun loadSessions(userId: String) {
+    /**
+     * 加载会话列表
+     * userId 从 token 中自动获取，不需要传递
+     */
+    fun loadSessions() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val response = apiService.getChatSessions(userId)
+                val token = getAuthToken()
+                if (token == null) {
+                    _error.value = "请先登录后再使用AI聊天功能"
+                    return@launch
+                }
+                val response = apiService.getChatSessions(token)
                 if (response.isSuccessful && response.body()?.code == 200) {
                     _sessions.value = response.body()?.data ?: emptyList()
                 } else {
@@ -56,22 +75,31 @@ class AIChatViewModel : ViewModel() {
         }
     }
 
-    fun sendMessage(content: String, userId: String, onSuccess: (() -> Unit)? = null) {
+    /**
+     * 发送消息
+     * userId 从 token 中自动获取，不需要传递
+     */
+    fun sendMessage(content: String, onSuccess: (() -> Unit)? = null) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
+
+                val token = getAuthToken()
+                if (token == null) {
+                    _error.value = "请先登录后再发送消息"
+                    return@launch
+                }
 
                 val userMessage = Message(content = content, role = MessageRole.USER)
                 _messages.value = _messages.value + userMessage
 
                 val request = ChatMessageRequest(
                     message = content,
-                    sessionId = _currentSessionId.value,
-                    userId = userId
+                    sessionId = _currentSessionId.value
                 )
 
-                val response = apiService.sendMessage(request)
+                val response = apiService.sendMessage(token, request)
 
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
@@ -79,7 +107,7 @@ class AIChatViewModel : ViewModel() {
                         val data = apiResponse.data
                         if (_currentSessionId.value == null) {
                             _currentSessionId.value = data.sessionId
-                            loadSessions(userId) // 如果是新会话，刷新侧边栏
+                            loadSessions() // 如果是新会话，刷新侧边栏
                         }
                         val aiMessage = Message(
                             content = data.message,
@@ -103,10 +131,13 @@ class AIChatViewModel : ViewModel() {
         }
     }
 
-    fun createNewSession(userId: String) {
+    /**
+     * 创建新会话
+     */
+    fun createNewSession() {
         _currentSessionId.value = null
         _messages.value = emptyList()
-        loadSessions(userId) // 重新加载会话以确保列表最新
+        loadSessions() // 重新加载会话以确保列表最新
     }
 
     fun loadChatHistory(sessionId: String) {
@@ -115,7 +146,13 @@ class AIChatViewModel : ViewModel() {
                 _isLoading.value = true
                 _error.value = null
 
-                val response = apiService.getChatHistory(sessionId)
+                val token = getAuthToken()
+                if (token == null) {
+                    _error.value = "请先登录后再查看聊天记录"
+                    return@launch
+                }
+
+                val response = apiService.getChatHistory(token, sessionId)
 
                 if (response.isSuccessful) {
                     val apiResponse = response.body()

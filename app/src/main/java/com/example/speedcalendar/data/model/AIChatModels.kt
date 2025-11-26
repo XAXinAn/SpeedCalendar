@@ -2,12 +2,11 @@ package com.example.speedcalendar.data.model
 
 /**
  * AI聊天消息请求
+ * 注意：userId 从 token 中自动获取，不需要在请求体中传递
  */
 data class ChatMessageRequest(
     val message: String,
-    val sessionId: String? = null,
-    val userId: String,
-    val context: Map<String, Any>? = null
+    val sessionId: String? = null
 )
 
 /**
@@ -31,9 +30,9 @@ data class ToolCall(
 
 /**
  * 聊天会话创建请求
+ * 注意：userId 从 token 中自动获取
  */
 data class CreateSessionRequest(
-    val userId: String,
     val title: String? = null
 )
 
