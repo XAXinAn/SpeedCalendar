@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Translate
@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.speedcalendar.data.local.UserPreferences
 import com.example.speedcalendar.ui.theme.Background
 
 data class AITool(
@@ -61,9 +63,11 @@ data class AITool(
 @Composable
 fun AIScreen(
     onNavigateToChat: (String?) -> Unit = {},
-    onNavigateToOcr: () -> Unit = {}
+    onRequestScreenCapture: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val userPreferences = remember { UserPreferences.getInstance(context) }
+    val isLoggedIn = remember { userPreferences.isLoggedIn() }
 
     val aiTools = listOf(
         AITool(
@@ -72,14 +76,6 @@ fun AIScreen(
             description = "与智能助手对话",
             icon = Icons.Default.AutoAwesome,
             iconBackgroundColor = Color(0xFF5AD8A6),
-            isAvailable = true
-        ),
-        AITool(
-            id = "ocr",
-            name = "OCR识别",
-            description = "从图片中提取文字",
-            icon = Icons.Default.DocumentScanner,
-            iconBackgroundColor = Color(0xFF5B8FF9),
             isAvailable = true
         ),
         AITool(
@@ -139,8 +135,13 @@ fun AIScreen(
                         if (tool.isAvailable) {
                             when (tool.id) {
                                 "chat" -> onNavigateToChat(null)
-                                "ocr" -> onNavigateToOcr()
                                 "floating_window" -> {
+                                    // 检查是否已登录
+                                    if (!isLoggedIn) {
+                                        Toast.makeText(context, "请先登录后再使用悬浮窗功能", Toast.LENGTH_SHORT).show()
+                                        return@AIToolCard
+                                    }
+                                    
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
                                         val intent = Intent(
                                             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -148,7 +149,8 @@ fun AIScreen(
                                         )
                                         context.startActivity(intent)
                                     } else {
-                                        context.startService(Intent(context, FloatingWindowService::class.java))
+                                        // 请求截屏权限并启动悬浮窗
+                                        onRequestScreenCapture()
                                     }
                                 }
                                 else -> { /* Do nothing */ }

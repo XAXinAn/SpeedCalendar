@@ -85,8 +85,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
      * 检查登录状态
      */
     private fun checkLoginStatus() {
-        _isLoggedIn.value = userPreferences.isLoggedIn()
-        _userInfo.value = userPreferences.getUserInfo()
+        val token = userPreferences.getAccessToken()
+        val loggedIn = userPreferences.isLoggedIn()
+        val info = userPreferences.getUserInfo()
+        
+        Log.d("AuthViewModel", "checkLoginStatus: token=${if (token != null) "存在(${token.take(20)}...)" else "null"}")
+        Log.d("AuthViewModel", "checkLoginStatus: isLoggedIn=$loggedIn, userInfo=${if (info != null) "存在" else "null"}")
+        
+        _isLoggedIn.value = loggedIn
+        _userInfo.value = info
     }
 
     /**

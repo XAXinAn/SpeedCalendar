@@ -1,5 +1,7 @@
 package com.example.speedcalendar.data.api
 
+import android.content.Context
+import com.example.speedcalendar.data.local.UserPreferences
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -20,16 +22,35 @@ object RetrofitClient {
     private const val BASE_URL = "http://localhost:8080/api/"
     //private const val BASE_URL = "http://10.0.2.2:8080/api/"
 
+    private var userPreferences: UserPreferences? = null
+    private var okHttpClient: OkHttpClient? = null
+    private var retrofit: Retrofit? = null
+
     /**
-     * OkHttp客户端
+     * 初始化RetrofitClient
+     * 必须在Application或第一次使用前调用
      */
-    private val okHttpClient: OkHttpClient by lazy {
+    fun init(context: Context) {
+        if (userPreferences == null) {
+            userPreferences = UserPreferences.getInstance(context)
+            okHttpClient = createOkHttpClient()
+            retrofit = createRetrofit()
+        }
+    }
+
+    /**
+     * 创建OkHttp客户端
+     */
+    private fun createOkHttpClient(): OkHttpClient {
+        val prefs = userPreferences ?: throw IllegalStateException("RetrofitClient未初始化，请先调用init()")
+        
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
-        OkHttpClient.Builder()
+        return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+            .addInterceptor(AuthInterceptor(prefs)) // 自动添加Token + 401时自动刷新
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
@@ -38,48 +59,50 @@ object RetrofitClient {
     }
 
     /**
-     * Retrofit实例
+     * 创建Retrofit实例
      */
-    private val retrofit: Retrofit by lazy {
-        Retrofit.Builder()
+    private fun createRetrofit(): Retrofit {
+        return Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(okHttpClient)
+            .client(okHttpClient ?: throw IllegalStateException("OkHttpClient未初始化"))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
 
     /**
+     * 获取Retrofit实例
+     */
+    private fun getRetrofit(): Retrofit {
+        return retrofit ?: throw IllegalStateException("RetrofitClient未初始化，请先调用init()")
+    }
+
+    /**
      * AuthApiService实例
      */
-    val authApiService: AuthApiService by lazy {
-        retrofit.create(AuthApiService::class.java)
-    }
+    val authApiService: AuthApiService
+        get() = getRetrofit().create(AuthApiService::class.java)
 
     /**
      * ScheduleApiService实例
      */
-    val scheduleApiService: ScheduleApiService by lazy {
-        retrofit.create(ScheduleApiService::class.java)
-    }
+    val scheduleApiService: ScheduleApiService
+        get() = getRetrofit().create(ScheduleApiService::class.java)
 
     /**
      * PrivacyApiService实例
      */
-    val privacyApiService: PrivacyApiService by lazy {
-        retrofit.create(PrivacyApiService::class.java)
-    }
+    val privacyApiService: PrivacyApiService
+        get() = getRetrofit().create(PrivacyApiService::class.java)
 
     /**
      * AvatarApiService实例
      */
-    val avatarApiService: AvatarApiService by lazy {
-        retrofit.create(AvatarApiService::class.java)
-    }
+    val avatarApiService: AvatarApiService
+        get() = getRetrofit().create(AvatarApiService::class.java)
 
     /**
      * AIChatApiService实例
      */
-    val aiChatApiService: AIChatApiService by lazy {
-        retrofit.create(AIChatApiService::class.java)
-    }
+    val aiChatApiService: AIChatApiService
+        get() = getRetrofit().create(AIChatApiService::class.java)
 }

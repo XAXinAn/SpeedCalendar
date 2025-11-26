@@ -37,10 +37,17 @@ interface AuthApiService {
         @Body request: UpdateUserInfoRequest
     ): Response<ApiResponse<UserInfo>>
 
-    /**
+/**
      * 健康检查
      * GET /api/auth/health
      */
     @GET("auth/health")
     suspend fun health(): Response<ApiResponse<String>>
+
+    /**
+     * 刷新Token
+     * POST /api/auth/refresh
+     */
+    @POST("auth/refresh")
+    suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<ApiResponse<RefreshTokenResponse>>
 }

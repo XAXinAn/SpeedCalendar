@@ -1,5 +1,11 @@
 package com.example.speedcalendar.features.ai.chat
 
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,15 +26,21 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +48,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -42,9 +56,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -57,16 +73,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 import com.example.speedcalendar.viewmodel.AIChatViewModel
 import com.example.speedcalendar.viewmodel.ChatSession
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -92,8 +112,10 @@ fun AIChatScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
+    // 预加载 OCR 引擎
     LaunchedEffect(Unit) {
         viewModel.loadSessions()
+        viewModel.initOcr()
     }
 
     ModalNavigationDrawer(
@@ -124,15 +146,87 @@ fun AIChatContent(
     initialMessage: String?,
     onMenuClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val currentSessionId by viewModel.currentSessionId.collectAsState()
+    val isOcrProcessing by viewModel.isOcrProcessing.collectAsState()
+    val isOcrReady by viewModel.isOcrReady.collectAsState()
 
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    // 快速添加模式状态
+    var isQuickAddMode by remember { mutableStateOf(false) }
+    
+    // 底部菜单状态
+    var showImagePickerSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    
+    // 相机权限相关状态
+    var showCameraPermissionDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    
+    // 拍照临时文件 Uri
+    var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    
+    // 创建拍照临时文件
+    fun createTempPhotoUri(): Uri {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val imageFileName = "OCR_${timeStamp}.jpg"
+        val storageDir = File(context.cacheDir, "photos")
+        storageDir.mkdirs()
+        val imageFile = File(storageDir, imageFileName)
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            imageFile
+        )
+    }
+    
+    // 图片选择器（从相册）
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            viewModel.processImageForOcr(it) { result ->
+                inputText = result
+            }
+        }
+    }
+    
+    // 拍照
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && tempPhotoUri != null) {
+            viewModel.processImageForOcr(tempPhotoUri!!) { result ->
+                inputText = result
+            }
+        }
+    }
+    
+    // 相机权限请求
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // 权限授予，启动相机
+            tempPhotoUri = createTempPhotoUri()
+            takePictureLauncher.launch(tempPhotoUri!!)
+        } else {
+            // 权限被拒绝，显示解释对话框或设置引导
+            showCameraPermissionDialog = true
+        }
+    }
+    
+    // 检查并请求相机权限
+    fun requestCameraPermission() {
+        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+    }
 
     LaunchedEffect(initialMessage) {
         if (!initialMessage.isNullOrEmpty() && messages.isEmpty()) {
@@ -151,6 +245,97 @@ fun AIChatContent(
         error?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
+        }
+    }
+    
+    // 相机权限解释对话框
+    if (showCameraPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showCameraPermissionDialog = false },
+            title = { Text("需要相机权限") },
+            text = { Text("拍照识别功能需要使用相机，请授予相机权限。如果您之前拒绝了权限，可能需要在设置中手动开启。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCameraPermissionDialog = false
+                    showSettingsDialog = true
+                }) {
+                    Text("去设置")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showCameraPermissionDialog = false 
+                }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+    
+    // 引导到设置页面对话框
+    if (showSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showSettingsDialog = false },
+            title = { Text("开启相机权限") },
+            text = { Text("请在应用设置中开启相机权限，以使用拍照识别功能。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSettingsDialog = false
+                    // 跳转到应用设置页面
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                    context.startActivity(intent)
+                }) {
+                    Text("去设置")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSettingsDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+    
+    // 图片选择底部菜单
+    if (showImagePickerSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showImagePickerSheet = false },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "选择图片来源",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+                
+                // 从相册选择
+                ImagePickerOption(
+                    icon = Icons.Default.Image,
+                    title = "从相册选择",
+                    onClick = {
+                        showImagePickerSheet = false
+                        pickImageLauncher.launch("image/*")
+                    }
+                )
+                
+                // 拍照
+                ImagePickerOption(
+                    icon = Icons.Default.CameraAlt,
+                    title = "拍照",
+                    onClick = {
+                        showImagePickerSheet = false
+                        requestCameraPermission()
+                    }
+                )
+            }
         }
     }
 
@@ -189,7 +374,11 @@ fun AIChatContent(
                         }
                     }
                 },
-                isLoading = isLoading
+                isLoading = isLoading,
+                isOcrProcessing = isOcrProcessing,
+                isQuickAddMode = isQuickAddMode,
+                onQuickAddToggle = { isQuickAddMode = !isQuickAddMode },
+                onImageClick = { showImagePickerSheet = true }
             )
         }
     ) { innerPadding ->
@@ -358,59 +547,177 @@ private fun ChatInputBar(
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
-    isLoading: Boolean
+    isLoading: Boolean,
+    isOcrProcessing: Boolean = false,
+    isQuickAddMode: Boolean = false,
+    onQuickAddToggle: () -> Unit = {},
+    onImageClick: () -> Unit = {}
 ) {
     Surface(
         shadowElevation = 8.dp,
         color = MaterialTheme.colorScheme.surface
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
+            // 快速添加按钮行
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .background(Background, CircleShape)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
-                decorationBox = {
-                    if (value.isEmpty()) {
-                        Text("输入消息...", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    it()
-                }
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-
-            val canSend = value.isNotBlank() && !isLoading
-            IconButton(
-                onClick = onSend,
-                enabled = canSend,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (canSend) PrimaryBlue else MaterialTheme.colorScheme.surfaceVariant)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.Start
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        strokeWidth = 2.dp
+                Surface(
+                    onClick = onQuickAddToggle,
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isQuickAddMode) PrimaryBlue else MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FlashOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = if (isQuickAddMode) Color.White else PrimaryBlue
+                        )
+                        Text(
+                            text = "快速添加",
+                            fontSize = 13.sp,
+                            color = if (isQuickAddMode) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            // 输入栏
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 快速添加模式下显示图片上传按钮
+                if (isQuickAddMode) {
+                    IconButton(
+                        onClick = onImageClick,
+                        enabled = !isOcrProcessing,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryBlue.copy(alpha = 0.1f))
+                    ) {
+                        if (isOcrProcessing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = PrimaryBlue,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Image,
+                                contentDescription = "上传图片",
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                
+                // 文本输入框 - 支持多行和滚动
+                val scrollState = rememberScrollState()
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp, max = 120.dp)
+                        .background(Background, RoundedCornerShape(24.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    BasicTextField(
+                        value = if (isOcrProcessing) "正在识别..." else value,
+                        onValueChange = onValueChange,
+                        enabled = !isOcrProcessing,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = if (isOcrProcessing) 
+                                MaterialTheme.colorScheme.onSurfaceVariant 
+                            else 
+                                MaterialTheme.colorScheme.onBackground
+                        ),
+                        decorationBox = { innerTextField ->
+                            if (value.isEmpty() && !isOcrProcessing) {
+                                Text("输入消息...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            innerTextField()
+                        }
                     )
-                } else {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "发送",
-                        tint = if (canSend) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+
+                val canSend = value.isNotBlank() && !isLoading && !isOcrProcessing
+                IconButton(
+                    onClick = onSend,
+                    enabled = canSend,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (canSend) PrimaryBlue else MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "发送",
+                            tint = if (canSend) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * 图片选择器选项
+ */
+@Composable
+private fun ImagePickerOption(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(PrimaryBlue.copy(alpha = 0.1f))
+                .padding(8.dp),
+            tint = PrimaryBlue
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }

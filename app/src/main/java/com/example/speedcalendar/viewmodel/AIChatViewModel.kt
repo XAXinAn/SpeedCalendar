@@ -1,6 +1,8 @@
 package com.example.speedcalendar.viewmodel
 
 import android.app.Application
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.speedcalendar.data.api.RetrofitClient
@@ -8,6 +10,7 @@ import com.example.speedcalendar.data.local.UserPreferences
 import com.example.speedcalendar.data.model.ChatMessageRequest
 import com.example.speedcalendar.features.ai.chat.Message
 import com.example.speedcalendar.features.ai.chat.MessageRole
+import com.example.speedcalendar.utils.OcrHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,14 +25,21 @@ data class ChatSession(
 
 class AIChatViewModel(application: Application) : AndroidViewModel(application) {
 
+    companion object {
+        private const val TAG = "AIChatViewModel"
+    }
+
     private val apiService = RetrofitClient.aiChatApiService
     private val userPreferences = UserPreferences.getInstance(application)
+    private val ocrHelper = OcrHelper.getInstance(application)
 
     /**
      * 获取带有 Bearer 前缀的 Authorization Token
      */
     private fun getAuthToken(): String? {
         val token = userPreferences.getAccessToken()
+        val isLoggedIn = userPreferences.isLoggedIn()
+        Log.d(TAG, "getAuthToken: token=${if (token != null) "存在(${token.take(20)}...)" else "null"}, isLoggedIn=$isLoggedIn")
         return if (token != null) "Bearer $token" else null
     }
 
@@ -48,6 +58,62 @@ class AIChatViewModel(application: Application) : AndroidViewModel(application) 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // OCR 相关状态
+    private val _isOcrProcessing = MutableStateFlow(false)
+    val isOcrProcessing: StateFlow<Boolean> = _isOcrProcessing.asStateFlow()
+
+    private val _isOcrReady = MutableStateFlow(false)
+    val isOcrReady: StateFlow<Boolean> = _isOcrReady.asStateFlow()
+
+    private val _ocrResult = MutableStateFlow<String?>(null)
+    val ocrResult: StateFlow<String?> = _ocrResult.asStateFlow()
+
+    /**
+     * 初始化 OCR 引擎（进入页面时调用）
+     */
+    fun initOcr() {
+        viewModelScope.launch {
+            val result = ocrHelper.initialize()
+            _isOcrReady.value = result
+            if (!result) {
+                _error.value = "OCR 引擎初始化失败"
+            }
+        }
+    }
+
+    /**
+     * 处理图片进行 OCR 识别
+     * @param uri 图片 Uri
+     * @param onResult 识别完成回调，返回格式化后的文本（带"帮我添加日程："前缀）
+     */
+    fun processImageForOcr(uri: Uri, onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            _isOcrProcessing.value = true
+            _error.value = null
+            
+            try {
+                val result = ocrHelper.recognizeFromUri(uri)
+                if (result.success) {
+                    _ocrResult.value = result.formattedText
+                    onResult(result.formattedText)
+                } else {
+                    _error.value = result.error ?: "OCR 识别失败"
+                }
+            } catch (e: Exception) {
+                _error.value = "OCR 识别异常: ${e.message}"
+            } finally {
+                _isOcrProcessing.value = false
+            }
+        }
+    }
+
+    /**
+     * 清除 OCR 结果
+     */
+    fun clearOcrResult() {
+        _ocrResult.value = null
+    }
+
     /**
      * 加载会话列表
      * userId 从 token 中自动获取，不需要传递
@@ -61,13 +127,22 @@ class AIChatViewModel(application: Application) : AndroidViewModel(application) 
                     _error.value = "请先登录后再使用AI聊天功能"
                     return@launch
                 }
+                Log.d(TAG, "loadSessions: 发送请求")
                 val response = apiService.getChatSessions(token)
-                if (response.isSuccessful && response.body()?.code == 200) {
-                    _sessions.value = response.body()?.data ?: emptyList()
+                val body = response.body()
+                Log.d(TAG, "loadSessions: HTTP=${response.code()}, body.code=${body?.code}")
+                
+                if (response.isSuccessful && body != null) {
+                    when (body.code) {
+                        200 -> _sessions.value = body.data ?: emptyList()
+                        401 -> _error.value = "登录已过期，请重新登录"
+                        else -> _error.value = body.message ?: "加载会话列表失败"
+                    }
                 } else {
-                    _error.value = response.body()?.message ?: "加载会话列表失败"
+                    _error.value = "网络请求失败 (${response.code()})"
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "loadSessions: 异常", e)
                 _error.value = "加载会话列表异常: ${e.message}"
             } finally {
                 _isLoading.value = false
