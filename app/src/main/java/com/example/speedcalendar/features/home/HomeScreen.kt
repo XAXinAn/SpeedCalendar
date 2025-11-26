@@ -47,6 +47,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,41 +64,44 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
+import com.example.speedcalendar.viewmodel.HomeViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
-import java.util.UUID
 
 data class Schedule(
-    val id: String = UUID.randomUUID().toString(),
+    val scheduleId: String,
+    val userId: String,
     val title: String,
-    val date: LocalDate,
-    val time: String,
-    val location: String
+    val scheduleDate: String,
+    val startTime: String?,
+    val endTime: String?,
+    val location: String?,
+    val isAllDay: Boolean,
+    val createdAt: Long
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var showYearMonthPicker by remember { mutableStateOf(false) }
     var showAddScheduleSheet by remember { mutableStateOf(false) }
+    var editingSchedule by remember { mutableStateOf<Schedule?>(null) }
 
-    val schedules = remember {
-        listOf(
-            Schedule(title = "与团队成员的技术交流会议", date = LocalDate.now(), time = "14:00 - 15:00", location = "线上会议 - Google Meet"),
-            Schedule(title = "健身", date = LocalDate.now(), time = "18:00 - 19:00", location = "健身房"),
-            Schedule(title = "项目 Deadline", date = LocalDate.now().plusDays(2), time = "全天", location = "居家办公"),
-            Schedule(title = "整理文档", date = LocalDate.now().minusDays(1), time = "10:00 - 11:00", location = "公司会议室 A")
-        )
+    val schedules by homeViewModel.schedules.collectAsState()
+
+    LaunchedEffect(currentMonth) {
+        homeViewModel.loadSchedules(currentMonth)
     }
 
     val selectedDateSchedules = remember(selectedDate, schedules) {
-        schedules.filter { it.date == selectedDate }
+        schedules.filter { LocalDate.parse(it.scheduleDate) == selectedDate }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -200,7 +205,9 @@ fun HomeScreen() {
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(selectedDateSchedules) { schedule ->
-                            ScheduleItem(schedule = schedule)
+                            ScheduleItem(schedule = schedule) {
+                                editingSchedule = schedule
+                            }
                         }
                     }
                 } else {
@@ -216,7 +223,24 @@ fun HomeScreen() {
             enter = slideInHorizontally(initialOffsetX = { it }),
             exit = slideOutHorizontally(targetOffsetX = { it })
         ) {
-            AddScheduleSheet(onClose = { showAddScheduleSheet = false })
+            AddScheduleSheet(
+                homeViewModel = homeViewModel,
+                onClose = { showAddScheduleSheet = false }
+            )
+        }
+
+        AnimatedVisibility(
+            visible = editingSchedule != null,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
+        ) {
+            editingSchedule?.let {
+                EditScheduleSheet(
+                    schedule = it,
+                    homeViewModel = homeViewModel,
+                    onClose = { editingSchedule = null }
+                )
+            }
         }
     }
 }
@@ -299,7 +323,7 @@ fun CalendarGrid(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     weekDates.forEach { date ->
                         val isCurrentMonth = YearMonth.from(date) == yearMonth
-                        val hasSchedule = schedules.any { it.date == date } && isCurrentMonth
+                        val hasSchedule = schedules.any { LocalDate.parse(it.scheduleDate) == date } && isCurrentMonth
 
                         Box(
                             modifier = Modifier
@@ -359,9 +383,11 @@ fun CalendarGrid(
 }
 
 @Composable
-fun ScheduleItem(schedule: Schedule, modifier: Modifier = Modifier) {
+fun ScheduleItem(schedule: Schedule, onClick: () -> Unit) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -385,24 +411,26 @@ fun ScheduleItem(schedule: Schedule, modifier: Modifier = Modifier) {
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = schedule.time,
+                        text = schedule.startTime ?: "全天",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Location",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = schedule.location,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                if (schedule.location != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Location",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = schedule.location,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

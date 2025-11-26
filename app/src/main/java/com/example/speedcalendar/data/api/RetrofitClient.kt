@@ -56,6 +56,13 @@ object RetrofitClient {
     }
 
     /**
+     * ScheduleApiService实例
+     */
+    val scheduleApiService: ScheduleApiService by lazy {
+        retrofit.create(ScheduleApiService::class.java)
+    }
+
+    /**
      * PrivacyApiService实例
      */
     val privacyApiService: PrivacyApiService by lazy {

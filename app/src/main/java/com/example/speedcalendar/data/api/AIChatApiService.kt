@@ -1,6 +1,7 @@
 package com.example.speedcalendar.data.api
 
 import com.example.speedcalendar.data.model.*
+import com.example.speedcalendar.viewmodel.ChatSession
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -36,14 +37,11 @@ interface AIChatApiService {
 
     /**
      * 获取用户的会话列表
-     * GET /api/ai/chat/sessions/{userId}
+     * GET /api/ai/chat/sessions/user/{userId}
      */
-    @GET("ai/chat/sessions/{userId}")
-    suspend fun getUserSessions(
-        @Path("userId") userId: String,
-        @Query("page") page: Int = 0,
-        @Query("size") size: Int = 20
-    ): Response<ApiResponse<UserSessionsResponse>>
+    @GET("ai/chat/sessions/user/{userId}")
+    suspend fun getChatSessions(@Path("userId") userId: String): Response<ApiResponse<List<ChatSession>>>
+
 
     /**
      * 删除会话

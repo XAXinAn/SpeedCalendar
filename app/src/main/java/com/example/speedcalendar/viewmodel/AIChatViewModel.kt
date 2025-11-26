@@ -12,9 +12,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class ChatSession(
+    val id: String,
+    val title: String,
+    val lastMessage: String,
+    val timestamp: Long
+)
+
 class AIChatViewModel : ViewModel() {
 
     private val apiService = RetrofitClient.aiChatApiService
+
+    private val _sessions = MutableStateFlow<List<ChatSession>>(emptyList())
+    val sessions: StateFlow<List<ChatSession>> = _sessions.asStateFlow()
 
     private val _currentSessionId = MutableStateFlow<String?>(null)
     val currentSessionId: StateFlow<String?> = _currentSessionId.asStateFlow()
@@ -27,6 +37,24 @@ class AIChatViewModel : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    fun loadSessions(userId: String) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val response = apiService.getChatSessions(userId)
+                if (response.isSuccessful && response.body()?.code == 200) {
+                    _sessions.value = response.body()?.data ?: emptyList()
+                } else {
+                    _error.value = response.body()?.message ?: "加载会话列表失败"
+                }
+            } catch (e: Exception) {
+                _error.value = "加载会话列表异常: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 
     fun sendMessage(content: String, userId: String, onSuccess: (() -> Unit)? = null) {
         viewModelScope.launch {
@@ -51,6 +79,7 @@ class AIChatViewModel : ViewModel() {
                         val data = apiResponse.data
                         if (_currentSessionId.value == null) {
                             _currentSessionId.value = data.sessionId
+                            loadSessions(userId) // 如果是新会话，刷新侧边栏
                         }
                         val aiMessage = Message(
                             content = data.message,
@@ -75,32 +104,9 @@ class AIChatViewModel : ViewModel() {
     }
 
     fun createNewSession(userId: String) {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                _error.value = null
-
-                val request = CreateSessionRequest(userId = userId)
-                val response = apiService.createSession(request)
-
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse?.code == 200 && apiResponse.data != null) {
-                        _currentSessionId.value = apiResponse.data.id
-                        _messages.value = emptyList()
-                    } else {
-                        _error.value = apiResponse?.message ?: "创建会话失败"
-                    }
-                } else {
-                    _error.value = "网络请求失败: ${response.code()}"
-                }
-            } catch (e: Exception) {
-                _error.value = "创建会话异常: ${e.message}"
-                e.printStackTrace()
-            } finally {
-                _isLoading.value = false
-            }
-        }
+        _currentSessionId.value = null
+        _messages.value = emptyList()
+        loadSessions(userId) // 重新加载会话以确保列表最新
     }
 
     fun loadChatHistory(sessionId: String) {
