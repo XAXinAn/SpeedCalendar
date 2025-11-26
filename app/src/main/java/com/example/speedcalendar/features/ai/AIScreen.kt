@@ -1,5 +1,9 @@
 package com.example.speedcalendar.features.ai
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DocumentScanner
-import androidx.compose.material.icons.filled.FilterVintage
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Translate
@@ -39,15 +42,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.speedcalendar.ui.theme.Background
 
-/**
- * AI工具数据类
- */
 data class AITool(
     val id: String,
     val name: String,
@@ -57,16 +57,13 @@ data class AITool(
     val isAvailable: Boolean = true
 )
 
-/**
- * AI工具主界面
- * 仿钉钉设计，展示各种AI工具
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AIScreen(
     onNavigateToChat: (String?) -> Unit = {}
 ) {
-    // 定义AI工具列表
+    val context = LocalContext.current
+
     val aiTools = listOf(
         AITool(
             id = "chat",
@@ -82,6 +79,14 @@ fun AIScreen(
             description = "从图片中提取文字",
             icon = Icons.Default.DocumentScanner,
             iconBackgroundColor = Color(0xFF5B8FF9),
+            isAvailable = true
+        ),
+        AITool(
+            id = "floating_window",
+            name = "悬浮窗",
+            description = "开启一个可拖动的悬浮窗",
+            icon = Icons.Default.Lightbulb,
+            iconBackgroundColor = Color(0xFF7265E3),
             isAvailable = true
         ),
         AITool(
@@ -134,6 +139,17 @@ fun AIScreen(
                             when (tool.id) {
                                 "chat" -> onNavigateToChat(null)
                                 "ocr" -> { /* TODO: Navigate to OCR */ }
+                                "floating_window" -> {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
+                                        val intent = Intent(
+                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            Uri.parse("package:${context.packageName}")
+                                        )
+                                        context.startActivity(intent)
+                                    } else {
+                                        context.startService(Intent(context, FloatingWindowService::class.java))
+                                    }
+                                }
                                 else -> { /* Do nothing */ }
                             }
                         }
@@ -144,9 +160,6 @@ fun AIScreen(
     }
 }
 
-/**
- * AI工具卡片
- */
 @Composable
 fun AIToolCard(
     tool: AITool,
