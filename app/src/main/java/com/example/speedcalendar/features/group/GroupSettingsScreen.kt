@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,7 +42,8 @@ import com.example.speedcalendar.ui.theme.Background
 fun GroupSettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCreateGroup: () -> Unit,
-    onNavigateToJoinGroup: () -> Unit
+    onNavigateToJoinGroup: () -> Unit,
+    onNavigateToGroupManagement: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -86,6 +88,12 @@ fun GroupSettingsScreen(
                         icon = Icons.Outlined.PersonAdd,
                         title = "加入群组",
                         onClick = onNavigateToJoinGroup
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Settings,
+                        title = "群组管理",
+                        onClick = onNavigateToGroupManagement
                     )
                 }
             }

@@ -32,7 +32,10 @@ import androidx.navigation.navArgument
 import com.example.speedcalendar.features.ai.AIScreen
 import com.example.speedcalendar.features.ai.chat.AIChatScreen
 import com.example.speedcalendar.features.group.CreateGroupScreen
+import com.example.speedcalendar.features.group.GroupDetailsScreen
+import com.example.speedcalendar.features.group.GroupManagementScreen
 import com.example.speedcalendar.features.group.GroupSettingsScreen
+import com.example.speedcalendar.features.group.JoinGroupScreen
 import com.example.speedcalendar.features.home.AddScheduleScreen
 import com.example.speedcalendar.features.home.EditScheduleScreen
 import com.example.speedcalendar.features.home.HomeScreen
@@ -190,13 +193,46 @@ fun MainScreen(
                     GroupSettingsScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateToCreateGroup = { navController.navigate(Screen.CreateGroup.route) },
-                        onNavigateToJoinGroup = { /* TODO */ }
+                        onNavigateToJoinGroup = { navController.navigate(Screen.JoinGroup.route) },
+                        onNavigateToGroupManagement = { navController.navigate(Screen.GroupManagement.route) }
                     )
                 }
                 composable(Screen.CreateGroup.route) {
                     CreateGroupScreen(
                         onNavigateBack = { navController.popBackStack() }
                     )
+                }
+                composable(Screen.JoinGroup.route) {
+                    JoinGroupScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(Screen.GroupManagement.route) {
+                    GroupManagementScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToGroupDetails = { groupId, groupName ->
+                            navController.navigate(Screen.GroupDetails.createRoute(groupId, groupName))
+                        }
+                    )
+                }
+                composable(
+                    route = Screen.GroupDetails.route,
+                    arguments = listOf(
+                        navArgument("groupId") { type = NavType.StringType },
+                        navArgument("groupName") { type = NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val groupId = backStackEntry.arguments?.getString("groupId")
+                    val groupName = backStackEntry.arguments?.getString("groupName")?.let {
+                        URLDecoder.decode(it, "UTF-8")
+                    }
+                    if (groupId != null && groupName != null) {
+                        GroupDetailsScreen(
+                            groupId = groupId,
+                            groupName = groupName,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
                 }
                 composable(
                     route = Screen.AddSchedule.route,

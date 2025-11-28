@@ -1,5 +1,6 @@
 package com.example.speedcalendar.navigation
 
+import java.net.URLEncoder
 import java.time.LocalDate
 
 sealed class Screen(val route: String, val title: String) {
@@ -11,10 +12,18 @@ sealed class Screen(val route: String, val title: String) {
     object PrivacySettings : Screen("privacy_settings", "隐私设置")
     object GroupSettings : Screen("group_settings", "群组设置")
     object CreateGroup : Screen("create_group", "新建群组")
+    object JoinGroup : Screen("join_group", "加入群组")
+    object GroupManagement : Screen("group_management", "群组管理")
+    object GroupDetails : Screen("group_details/{groupId}/{groupName}", "群组详情") {
+        fun createRoute(groupId: String, groupName: String): String {
+            val encodedGroupName = URLEncoder.encode(groupName, "UTF-8")
+            return "group_details/$groupId/$encodedGroupName"
+        }
+    }
     object AIChat : Screen("ai_chat?initialMessage={initialMessage}", "AI聊天") {
         fun createRoute(initialMessage: String? = null): String {
             return if (initialMessage != null) {
-                "ai_chat?initialMessage=${java.net.URLEncoder.encode(initialMessage, "UTF-8")}"
+                "ai_chat?initialMessage=${URLEncoder.encode(initialMessage, "UTF-8")}"
             } else {
                 "ai_chat"
             }

@@ -14,7 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,29 +48,29 @@ import com.example.speedcalendar.viewmodel.GroupViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateGroupScreen(
+fun JoinGroupScreen(
     onNavigateBack: () -> Unit,
     viewModel: GroupViewModel = viewModel()
 ) {
-    var groupName by remember { mutableStateOf("") }
-    val createGroupResult by viewModel.createGroupResult.collectAsState()
+    var groupId by remember { mutableStateOf("") }
+    val joinGroupResult by viewModel.joinGroupResult.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
 
-    LaunchedEffect(createGroupResult) {
-        createGroupResult?.onSuccess {
-            Toast.makeText(context, "群组创建成功", Toast.LENGTH_SHORT).show()
+    LaunchedEffect(joinGroupResult) {
+        joinGroupResult?.onSuccess {
+            Toast.makeText(context, "成功加入群组", Toast.LENGTH_SHORT).show()
             onNavigateBack()
         }
-        createGroupResult?.onFailure {
-            Toast.makeText(context, "创建失败: ${it.message}", Toast.LENGTH_SHORT).show()
+        joinGroupResult?.onFailure {
+            Toast.makeText(context, "加入失败: ${it.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("新建群组", fontWeight = FontWeight.Bold) },
+                title = { Text("加入群组", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -89,8 +89,8 @@ fun CreateGroupScreen(
         bottomBar = {
             Button(
                 onClick = {
-                    if (groupName.isNotBlank()) {
-                        viewModel.createGroup(groupName)
+                    if (groupId.isNotBlank()) {
+                        viewModel.joinGroup(groupId)
                     }
                 },
                 modifier = Modifier
@@ -99,7 +99,7 @@ fun CreateGroupScreen(
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                enabled = groupName.isNotBlank() && !isLoading
+                enabled = groupId.isNotBlank() && !isLoading
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -107,7 +107,7 @@ fun CreateGroupScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("创建", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("立即加入", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -120,8 +120,8 @@ fun CreateGroupScreen(
                 .padding(horizontal = 24.dp, vertical = 24.dp)
         ) {
             BasicTextField(
-                value = groupName,
-                onValueChange = { groupName = it },
+                value = groupId,
+                onValueChange = { groupId = it },
                 singleLine = true,
                 textStyle = LocalTextStyle.current.copy(
                     fontSize = 16.sp,
@@ -135,10 +135,10 @@ fun CreateGroupScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(start = 16.dp)
                     ) {
-                        Icon(Icons.Default.Group, contentDescription = null, tint = PrimaryBlue)
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = PrimaryBlue)
                         Box(modifier = Modifier.padding(start = 16.dp)) {
-                            if (groupName.isEmpty()) {
-                                Text("群组名称", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
+                            if (groupId.isEmpty()) {
+                                Text("请输入群组ID或邀请码", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
                             }
                             innerTextField()
                         }
