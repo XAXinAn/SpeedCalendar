@@ -25,7 +25,7 @@ class AuthInterceptor(
 
     companion object {
         private const val TAG = "AuthInterceptor"
-        private const val BASE_URL = "http://localhost:8080/api/"
+        private const val BASE_URL = "http://192.168.43.227:8080/api/"
         private const val HEADER_RETRY = "X-Token-Retry"
     }
 
