@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Schedule
@@ -59,6 +60,7 @@ fun EditScheduleScreen(
         var time by remember { mutableStateOf(scheduleData.startTime) }
         var selectedGroupId by remember(scheduleData) { mutableStateOf(scheduleData.groupId) }
         var showTimePicker by remember { mutableStateOf(false) }
+        var showGroupPicker by remember { mutableStateOf(false) }
         var showDeleteDialog by remember { mutableStateOf(false) }
 
         if (showTimePicker) {
@@ -78,6 +80,18 @@ fun EditScheduleScreen(
                 },
                 initialHour = initialHour,
                 initialMinute = initialMinute
+            )
+        }
+
+        if (showGroupPicker) {
+            GroupPickerDialog(
+                groups = adminGroups,
+                initialSelectedGroupId = selectedGroupId,
+                onDismiss = { showGroupPicker = false },
+                onConfirm = { 
+                    selectedGroupId = it
+                    showGroupPicker = false 
+                }
             )
         }
 
@@ -167,10 +181,11 @@ fun EditScheduleScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 BorderlessInputField(icon = Icons.Default.LocationOn, placeholder = "地点", value = location, onValueChange = { location = it })
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                GroupSelectorDropdown(
-                    groups = adminGroups,
-                    selectedGroupId = selectedGroupId,
-                    onGroupSelected = { selectedGroupId = it }
+                BorderlessClickableField(
+                    icon = Icons.Default.Groups,
+                    placeholder = "归属",
+                    value = adminGroups.find { it.groupId == selectedGroupId }?.groupName ?: "个人",
+                    onClick = { showGroupPicker = true }
                 )
             }
         }
