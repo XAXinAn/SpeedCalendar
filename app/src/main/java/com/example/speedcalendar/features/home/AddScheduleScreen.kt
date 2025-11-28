@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,15 +42,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
+import com.example.speedcalendar.viewmodel.GroupViewModel
 import com.example.speedcalendar.viewmodel.HomeViewModel
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddScheduleScreen(
-    homeViewModel: HomeViewModel,
+    homeViewModel: HomeViewModel = viewModel(),
+    groupViewModel: GroupViewModel = viewModel(),
     selectedDate: LocalDate,
     onNavigateBack: () -> Unit
 ) {
@@ -57,6 +61,8 @@ fun AddScheduleScreen(
     var location by remember { mutableStateOf("") }
     var time by remember { mutableStateOf<String?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
+    val adminGroups by groupViewModel.adminGroups.collectAsState()
+    var selectedGroupId by remember { mutableStateOf<String?>(null) }
 
     if (showTimePicker) {
         val (initialHour, initialMinute) = remember(time) {
@@ -98,7 +104,7 @@ fun AddScheduleScreen(
         bottomBar = {
             Button(
                 onClick = {
-                    homeViewModel.addSchedule(title, selectedDate, time, location) {
+                    homeViewModel.addSchedule(title, selectedDate, time, location, selectedGroupId) {
                         onNavigateBack() // Close the screen on success
                     }
                 },
@@ -126,65 +132,12 @@ fun AddScheduleScreen(
             BorderlessClickableField(icon = Icons.Default.Schedule, placeholder = "时间", value = time ?: "", onClick = { showTimePicker = true })
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
             BorderlessInputField(icon = Icons.Default.LocationOn, placeholder = "地点", value = location, onValueChange = { location = it })
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            GroupSelectorDropdown(
+                groups = adminGroups,
+                selectedGroupId = selectedGroupId,
+                onGroupSelected = { selectedGroupId = it }
+            )
         }
-    }
-}
-
-@Composable
-fun BorderlessInputField(
-    icon: ImageVector,
-    placeholder: String,
-    value: String,
-    onValueChange: (String) -> Unit
-) {
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        singleLine = true,
-        textStyle = LocalTextStyle.current.copy(
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onSurface
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        decorationBox = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Icon(icon, contentDescription = null, tint = PrimaryBlue)
-                Box(modifier = Modifier.weight(1f)) {
-                    if (value.isEmpty()) {
-                        Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
-                    }
-                    it()
-                }
-            }
-        }
-    )
-}
-
-@Composable
-fun BorderlessClickableField(
-    icon: ImageVector,
-    placeholder: String,
-    value: String,
-    onClick: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable(onClick = onClick, interactionSource = remember { MutableInteractionSource() }, indication = null)
-    ) {
-        Icon(icon, contentDescription = null, tint = PrimaryBlue)
-        Text(
-            text = value.ifEmpty { placeholder },
-            color = if (value.isNotEmpty()) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 16.sp
-        )
     }
 }

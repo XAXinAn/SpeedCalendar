@@ -36,23 +36,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
+import com.example.speedcalendar.viewmodel.GroupViewModel
 import com.example.speedcalendar.viewmodel.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditScheduleScreen(
     scheduleId: String,
-    homeViewModel: HomeViewModel,
+    homeViewModel: HomeViewModel = viewModel(),
+    groupViewModel: GroupViewModel = viewModel(),
     onNavigateBack: () -> Unit
 ) {
     val schedule by homeViewModel.getScheduleById(scheduleId).collectAsState(initial = null)
+    val adminGroups by groupViewModel.adminGroups.collectAsState()
 
     schedule?.let { scheduleData ->
         var title by remember { mutableStateOf(scheduleData.title) }
         var location by remember { mutableStateOf(scheduleData.location ?: "") }
         var time by remember { mutableStateOf(scheduleData.startTime) }
+        var selectedGroupId by remember(scheduleData) { mutableStateOf(scheduleData.groupId) }
         var showTimePicker by remember { mutableStateOf(false) }
         var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -130,7 +135,8 @@ fun EditScheduleScreen(
                         val updatedSchedule = scheduleData.copy(
                             title = title,
                             startTime = time,
-                            location = location
+                            location = location,
+                            groupId = selectedGroupId
                         )
                         homeViewModel.updateSchedule(updatedSchedule) {
                             onNavigateBack()
@@ -160,6 +166,12 @@ fun EditScheduleScreen(
                 BorderlessClickableField(icon = Icons.Default.Schedule, placeholder = "时间", value = time ?: "", onClick = { showTimePicker = true })
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 BorderlessInputField(icon = Icons.Default.LocationOn, placeholder = "地点", value = location, onValueChange = { location = it })
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                GroupSelectorDropdown(
+                    groups = adminGroups,
+                    selectedGroupId = selectedGroupId,
+                    onGroupSelected = { selectedGroupId = it }
+                )
             }
         }
     }

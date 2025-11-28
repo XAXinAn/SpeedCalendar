@@ -5,10 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.example.speedcalendar.data.api.RetrofitClient
 import com.example.speedcalendar.data.model.CreateGroupRequest
 import com.example.speedcalendar.data.model.Group
-import com.example.speedcalendar.data.model.GroupMember
+import com.example.speedcalendar.data.model.GroupDetails
 import com.example.speedcalendar.data.model.GroupMembership
+import com.example.speedcalendar.data.model.JoinGroupRequest
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class GroupViewModel : ViewModel() {
@@ -22,13 +27,25 @@ class GroupViewModel : ViewModel() {
     val joinGroupResult: StateFlow<Result<Group>?> = _joinGroupResult
 
     private val _myGroups = MutableStateFlow<List<GroupMembership>>(emptyList())
-    val myGroups: StateFlow<List<GroupMembership>> = _myGroups
+    val myGroups: StateFlow<List<GroupMembership>> = _myGroups.asStateFlow()
 
-    private val _groupMembers = MutableStateFlow<List<GroupMember>>(emptyList())
-    val groupMembers: StateFlow<List<GroupMember>> = _groupMembers
+    val adminGroups: StateFlow<List<GroupMembership>> = myGroups.map { groups ->
+        groups.filter { it.role == "admin" }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    private val _groupDetails = MutableStateFlow<GroupDetails?>(null)
+    val groupDetails: StateFlow<GroupDetails?> = _groupDetails.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    init {
+        loadMyGroups()
+    }
 
     fun createGroup(name: String) {
         viewModelScope.launch {
@@ -45,11 +62,12 @@ class GroupViewModel : ViewModel() {
         }
     }
 
-    fun joinGroup(groupId: String) {
+    fun joinGroup(invitationCode: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val group = groupApiService.joinGroup(groupId)
+                val request = JoinGroupRequest(invitationCode = invitationCode)
+                val group = groupApiService.joinGroup(request)
                 _joinGroupResult.value = Result.success(group)
             } catch (e: Exception) {
                 _joinGroupResult.value = Result.failure(e)
@@ -72,11 +90,11 @@ class GroupViewModel : ViewModel() {
         }
     }
 
-    fun loadGroupMembers(groupId: String) {
+    fun loadGroupDetails(groupId: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                _groupMembers.value = groupApiService.getGroupMembers(groupId)
+                _groupDetails.value = groupApiService.getGroupDetails(groupId)
             } catch (e: Exception) {
                 // Handle error
             } finally {
@@ -95,5 +113,9 @@ class GroupViewModel : ViewModel() {
                 // Handle error
             }
         }
+    }
+
+    fun clearCreateGroupResult() {
+        _createGroupResult.value = null
     }
 }

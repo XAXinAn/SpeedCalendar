@@ -39,7 +39,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val token = userPreferences.getAccessToken() // aiexpert: get token
+                val token = userPreferences.getAccessToken()
                 if (token != null) {
                     val response = scheduleApiService.getSchedules("Bearer $token", yearMonth.year, yearMonth.monthValue)
                     if (response.isSuccessful) {
@@ -63,7 +63,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun addSchedule(title: String, date: LocalDate, time: String?, location: String?, onSuccess: () -> Unit) {
+    fun addSchedule(title: String, date: LocalDate, time: String?, location: String?, groupId: String?, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 val token = userPreferences.getAccessToken()
@@ -76,7 +76,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             startTime = time,
                             endTime = null, // TODO: Add end time support
                             location = location,
-                            isAllDay = time == null
+                            isAllDay = time == null,
+                            groupId = groupId
                         )
                     )
                     if (response.isSuccessful) {
@@ -113,7 +114,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             startTime = schedule.startTime,
                             endTime = schedule.endTime,
                             location = schedule.location,
-                            isAllDay = schedule.isAllDay
+                            isAllDay = schedule.isAllDay,
+                            groupId = schedule.groupId
                         )
                     )
                     if (response.isSuccessful) {

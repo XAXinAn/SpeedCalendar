@@ -9,5 +9,6 @@ data class Schedule(
     val endTime: String?,
     val location: String?,
     val isAllDay: Boolean,
-    val createdAt: Long
+    val createdAt: Long,
+    val groupId: String?
 )

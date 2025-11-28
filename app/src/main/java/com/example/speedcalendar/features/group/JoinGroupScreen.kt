@@ -52,7 +52,7 @@ fun JoinGroupScreen(
     onNavigateBack: () -> Unit,
     viewModel: GroupViewModel = viewModel()
 ) {
-    var groupId by remember { mutableStateOf("") }
+    var invitationCode by remember { mutableStateOf("") }
     val joinGroupResult by viewModel.joinGroupResult.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
@@ -89,8 +89,8 @@ fun JoinGroupScreen(
         bottomBar = {
             Button(
                 onClick = {
-                    if (groupId.isNotBlank()) {
-                        viewModel.joinGroup(groupId)
+                    if (invitationCode.isNotBlank()) {
+                        viewModel.joinGroup(invitationCode)
                     }
                 },
                 modifier = Modifier
@@ -99,7 +99,7 @@ fun JoinGroupScreen(
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                enabled = groupId.isNotBlank() && !isLoading
+                enabled = invitationCode.isNotBlank() && !isLoading
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -120,8 +120,8 @@ fun JoinGroupScreen(
                 .padding(horizontal = 24.dp, vertical = 24.dp)
         ) {
             BasicTextField(
-                value = groupId,
-                onValueChange = { groupId = it },
+                value = invitationCode,
+                onValueChange = { invitationCode = it },
                 singleLine = true,
                 textStyle = LocalTextStyle.current.copy(
                     fontSize = 16.sp,
@@ -132,13 +132,12 @@ fun JoinGroupScreen(
                     .height(56.dp),
                 decorationBox = { innerTextField ->
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 16.dp)
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = PrimaryBlue)
                         Box(modifier = Modifier.padding(start = 16.dp)) {
-                            if (groupId.isEmpty()) {
-                                Text("请输入群组ID或邀请码", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
+                            if (invitationCode.isEmpty()) {
+                                Text("请输入邀请码", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
                             }
                             innerTextField()
                         }

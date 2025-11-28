@@ -1,10 +1,12 @@
-# **群组 (Group) 功能 API 接口文档**
+# **SpeedCalendar 后端 API 接口文档**
 
 **基础路径:** `/api`
 
 所有需要用户认证的接口，都需要在请求头 (Header) 中携带 `Authorization` 字段，值为 `Bearer <用户的JWT Token>`。
 
 ---
+
+## **群组 (Group) 功能**
 
 ### 1. 新建群组
 
@@ -14,31 +16,14 @@
 -   **方法:** `POST`
 -   **认证:** 需要用户认证
 
-#### 请求
-
-**请求头 (Headers):**
-
-```
-Authorization: Bearer <user_jwt_token>
-Content-Type: application/json
-```
-
 **请求体 (Body):**
-
 ```json
 {
   "name": "string"
 }
 ```
 
--   `name`: (string, 必需) - 新群组的名称。
-
-#### 响应
-
 **成功响应 (200 OK):**
-
-返回新建的群组对象，包含邀请码。
-
 ```json
 {
   "id": "string",
@@ -47,11 +32,6 @@ Content-Type: application/json
   "invitationCode": "string" // 新增：群组的唯一邀请码
 }
 ```
-
-**失败响应:**
-
--   `400 Bad Request`: 请求体不合法。
--   `401 Unauthorized`: 用户未登录或Token无效。
 
 ---
 
@@ -63,31 +43,14 @@ Content-Type: application/json
 -   **方法:** `POST`
 -   **认证:** 需要用户认证
 
-#### 请求
-
-**请求头 (Headers):**
-
-```
-Authorization: Bearer <user_jwt_token>
-Content-Type: application/json
-```
-
 **请求体 (Body):**
-
 ```json
 {
   "invitationCode": "string"
 }
 ```
 
--   `invitationCode`: (string, 必需) - 要加入的群组的邀请码。
-
-#### 响应
-
 **成功响应 (200 OK):**
-
-返回用户成功加入的那个群组对象。
-
 ```json
 {
   "id": "string",
@@ -98,10 +61,8 @@ Content-Type: application/json
 ```
 
 **失败响应:**
-
--   `401 Unauthorized`: 用户未登录或Token无效。
--   `404 Not Found`: 邀请码无效或对应的群组不存在。
--   `409 Conflict`: 用户已经是该群组的成员。
+- `404 Not Found`: 邀请码无效或对应的群组不存在。
+- `409 Conflict`: 用户已经是该群组的成员。
 
 ---
 
@@ -113,12 +74,7 @@ Content-Type: application/json
 -   **方法:** `GET`
 -   **认证:** 需要用户认证
 
-#### 响应
-
 **成功响应 (200 OK):**
-
-返回一个用户所属群组的摘要信息数组。
-
 ```json
 [
   {
@@ -139,16 +95,7 @@ Content-Type: application/json
 -   **方法:** `GET`
 -   **认证:** 需要用户认证
 
-#### 请求
-
-**路径参数 (Path Parameters):**
-
--   `groupId`: (string, 必需) - 要查询的群组的唯一ID。
-
-#### 响应
-
 **成功响应 (200 OK):**
-
 ```json
 {
   "id": "string",
@@ -167,9 +114,77 @@ Content-Type: application/json
 ```
 
 **失败响应:**
-
--   `401 Unauthorized`: 用户未登录或Token无效。
--   `403 Forbidden`: 用户不是该群组的成员。
--   `404 Not Found`: 群组不存在。
+- `403 Forbidden`: 用户不是该群组的成员。
 
 ---
+
+## **日程 (Schedule) 功能 (修改)**
+
+### 1. 获取日程列表
+
+此接口用于获取在指定月份中，对当前用户可见的所有日程。
+
+**可见范围:**
+1.  用户为自己创建的**个人日程**。
+2.  用户所在的所有**群组的日程**。
+
+-   **路径:** `/schedules`
+-   **方法:** `GET`
+-   **认证:** 需要用户认证
+
+**查询参数 (Query Parameters):**
+- `year`: (integer, 必需) - 年份, e.g., `2023`
+- `month`: (integer, 必需) - 月份, e.g., `11`
+
+**成功响应 (200 OK):**
+返回一个 `Schedule` 对象的数组。
+```json
+[
+  {
+    "scheduleId": "string",
+    "userId": "string", // 创建者ID
+    "title": "string",
+    "scheduleDate": "string",
+    "startTime": "string?",
+    "endTime": "string?",
+    "location": "string?",
+    "isAllDay": "boolean",
+    "createdAt": "long",
+    "groupId": "string?" // 如果是群组日程，则为群组ID
+  }
+]
+```
+
+---
+
+### 2. 添加日程
+
+-   **路径:** `/schedules`
+-   **方法:** `POST`
+
+**请求体 (Body):**
+
+在原有的 `AddScheduleRequest` 模型中，增加一个可为空的 `groupId` 字段。
+
+```json
+{
+  "title": "string",
+  "scheduleDate": "string",
+  "startTime": "string?",
+  "endTime": "string?",
+  "location": "string?",
+  "isAllDay": "boolean",
+  "groupId": "string?" // 新增：关联的群组ID，个人日程则为null
+}
+```
+
+---
+
+### 3. 修改日程
+
+-   **路径:** `/schedules/{scheduleId}`
+-   **方法:** `PUT`
+
+**请求体 (Body):**
+
+与“添加日程”的请求体结构相同，同样包含可为空的 `groupId` 字段。

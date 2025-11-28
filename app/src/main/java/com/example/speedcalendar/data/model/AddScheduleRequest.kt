@@ -6,5 +6,6 @@ data class AddScheduleRequest(
     val startTime: String?,
     val endTime: String?,
     val location: String?,
-    val isAllDay: Boolean
+    val isAllDay: Boolean,
+    val groupId: String?
 )
