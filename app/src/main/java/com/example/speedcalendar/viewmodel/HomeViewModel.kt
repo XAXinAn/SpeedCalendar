@@ -7,9 +7,11 @@ import com.example.speedcalendar.data.api.RetrofitClient
 import com.example.speedcalendar.data.local.UserPreferences
 import com.example.speedcalendar.data.model.AddScheduleRequest
 import com.example.speedcalendar.data.model.Schedule
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
@@ -28,6 +30,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    fun getScheduleById(scheduleId: String): Flow<Schedule?> {
+        return schedules.map { list -> list.find { it.scheduleId == scheduleId } }
+    }
 
     fun loadSchedules(yearMonth: YearMonth) {
         viewModelScope.launch {

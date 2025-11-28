@@ -31,6 +31,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.speedcalendar.features.ai.AIScreen
 import com.example.speedcalendar.features.ai.chat.AIChatScreen
+import com.example.speedcalendar.features.group.CreateGroupScreen
+import com.example.speedcalendar.features.group.GroupSettingsScreen
+import com.example.speedcalendar.features.home.AddScheduleScreen
+import com.example.speedcalendar.features.home.EditScheduleScreen
 import com.example.speedcalendar.features.home.HomeScreen
 import com.example.speedcalendar.features.mine.MineScreen
 import com.example.speedcalendar.features.mine.settings.EditProfileScreen
@@ -40,7 +44,9 @@ import com.example.speedcalendar.navigation.Screen
 import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 import com.example.speedcalendar.viewmodel.AuthViewModel
+import com.example.speedcalendar.viewmodel.HomeViewModel
 import java.net.URLDecoder
+import java.time.LocalDate
 
 data class BottomNavItem(
     val title: String,
@@ -55,6 +61,7 @@ fun MainScreen(
 ) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
+    val homeViewModel: HomeViewModel = viewModel()
 
     val bottomNavItems = listOf(
         BottomNavItem("日历", Screen.Home.route, Icons.Filled.DateRange, Icons.Outlined.DateRange),
@@ -107,7 +114,17 @@ fun MainScreen(
                 startDestination = Screen.Home.route,
                 modifier = Modifier.fillMaxSize()
             ) {
-                composable(Screen.Home.route) { HomeScreen() }
+                composable(Screen.Home.route) {
+                    HomeScreen(
+                        homeViewModel = homeViewModel,
+                        onNavigateToAddSchedule = {
+                            navController.navigate(Screen.AddSchedule.createRoute(it))
+                        },
+                        onNavigateToEditSchedule = {
+                            navController.navigate(Screen.EditSchedule.createRoute(it))
+                        }
+                    )
+                }
                 composable(Screen.AI.route) {
                     AIScreen(
                         onNavigateToChat = { initialMessage ->
@@ -139,6 +156,9 @@ fun MainScreen(
                         onNavigateToPersonalSettings = {
                             navController.navigate(Screen.PersonalSettings.route)
                         },
+                        onNavigateToGroupSettings = {
+                            navController.navigate(Screen.GroupSettings.route)
+                        },
                         viewModel = authViewModel
                     )
                 }
@@ -165,6 +185,42 @@ fun MainScreen(
                         onBack = { navController.popBackStack() },
                         authViewModel = authViewModel
                     )
+                }
+                composable(Screen.GroupSettings.route) {
+                    GroupSettingsScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToCreateGroup = { navController.navigate(Screen.CreateGroup.route) },
+                        onNavigateToJoinGroup = { /* TODO */ }
+                    )
+                }
+                composable(Screen.CreateGroup.route) {
+                    CreateGroupScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(
+                    route = Screen.AddSchedule.route,
+                    arguments = listOf(navArgument("selectedDate") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val selectedDate = LocalDate.parse(backStackEntry.arguments?.getString("selectedDate"))
+                    AddScheduleScreen(
+                        homeViewModel = homeViewModel,
+                        selectedDate = selectedDate,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(
+                    route = Screen.EditSchedule.route,
+                    arguments = listOf(navArgument("scheduleId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val scheduleId = backStackEntry.arguments?.getString("scheduleId")
+                    if (scheduleId != null) {
+                        EditScheduleScreen(
+                            homeViewModel = homeViewModel,
+                            scheduleId = scheduleId,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
                 }
             }
         }

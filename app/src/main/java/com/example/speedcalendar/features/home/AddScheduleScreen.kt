@@ -48,10 +48,10 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddScheduleSheet(
+fun AddScheduleScreen(
     homeViewModel: HomeViewModel,
     selectedDate: LocalDate,
-    onClose: () -> Unit
+    onNavigateBack: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
@@ -83,7 +83,7 @@ fun AddScheduleSheet(
             TopAppBar(
                 title = { Text("新建日程", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
@@ -99,7 +99,7 @@ fun AddScheduleSheet(
             Button(
                 onClick = {
                     homeViewModel.addSchedule(title, selectedDate, time, location) {
-                        onClose() // Close the sheet on success
+                        onNavigateBack() // Close the screen on success
                     }
                 },
                 modifier = Modifier

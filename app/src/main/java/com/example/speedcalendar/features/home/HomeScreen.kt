@@ -1,7 +1,6 @@
 package com.example.speedcalendar.features.home
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -77,12 +76,14 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
+fun HomeScreen(
+    homeViewModel: HomeViewModel = viewModel(),
+    onNavigateToAddSchedule: (LocalDate) -> Unit,
+    onNavigateToEditSchedule: (String) -> Unit
+) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var showYearMonthPicker by remember { mutableStateOf(false) }
-    var showAddScheduleSheet by remember { mutableStateOf(false) }
-    var editingSchedule by remember { mutableStateOf<Schedule?>(null) }
 
     val schedules by homeViewModel.schedules.collectAsState()
 
@@ -122,7 +123,7 @@ fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
             },
             floatingActionButton = {
                 FloatingActionButton(
-                    onClick = { showAddScheduleSheet = true },
+                    onClick = { onNavigateToAddSchedule(selectedDate) },
                     containerColor = PrimaryBlue,
                     contentColor = Color.White,
                     shape = CircleShape,
@@ -196,7 +197,7 @@ fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
                     ) {
                         items(selectedDateSchedules) { schedule ->
                             ScheduleItem(schedule = schedule) {
-                                editingSchedule = schedule
+                                onNavigateToEditSchedule(schedule.scheduleId)
                             }
                         }
                     }
@@ -205,32 +206,6 @@ fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
                         Text("今天没有日程安排", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            }
-        }
-
-        AnimatedVisibility(
-            visible = showAddScheduleSheet,
-            enter = slideInHorizontally(initialOffsetX = { it }),
-            exit = slideOutHorizontally(targetOffsetX = { it })
-        ) {
-            AddScheduleSheet(
-                homeViewModel = homeViewModel,
-                selectedDate = selectedDate,
-                onClose = { showAddScheduleSheet = false }
-            )
-        }
-
-        AnimatedVisibility(
-            visible = editingSchedule != null,
-            enter = slideInHorizontally(initialOffsetX = { it }),
-            exit = slideOutHorizontally(targetOffsetX = { it })
-        ) {
-            editingSchedule?.let {
-                EditScheduleSheet(
-                    schedule = it,
-                    homeViewModel = homeViewModel,
-                    onClose = { editingSchedule = null }
-                )
             }
         }
     }
@@ -408,7 +383,7 @@ fun ScheduleItem(schedule: Schedule, onClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (schedule.location != null) {
+                if (!schedule.location.isNullOrBlank()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.LocationOn,

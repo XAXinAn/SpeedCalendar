@@ -105,4 +105,10 @@ object RetrofitClient {
      */
     val aiChatApiService: AIChatApiService
         get() = getRetrofit().create(AIChatApiService::class.java)
+
+    /**
+     * GroupApiService实例
+     */
+    val groupApiService: GroupApiService
+        get() = getRetrofit().create(GroupApiService::class.java)
 }
