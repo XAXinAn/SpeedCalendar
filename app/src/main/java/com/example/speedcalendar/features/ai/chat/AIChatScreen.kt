@@ -4,10 +4,14 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +45,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -73,8 +78,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,6 +91,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
+import com.example.speedcalendar.utils.SparkChainSpeechHelper
 import com.example.speedcalendar.viewmodel.AIChatViewModel
 import com.example.speedcalendar.viewmodel.ChatSession
 import kotlinx.coroutines.launch
@@ -170,6 +178,64 @@ fun AIChatContent(
     // 相机权限相关状态
     var showCameraPermissionDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    
+    // 语音识别相关状态
+    val speechHelper = remember { SparkChainSpeechHelper(context) }
+    val speechState by speechHelper.state.collectAsState()
+    val speechVolume by speechHelper.volume.collectAsState()
+    var isRecording by remember { mutableStateOf(false) }
+    var showAudioPermissionDialog by remember { mutableStateOf(false) }
+    
+    // 录音权限请求
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // 权限授予，开始语音识别
+            speechHelper.startListening()
+            isRecording = true
+        } else {
+            showAudioPermissionDialog = true
+        }
+    }
+    
+    // 检查并请求录音权限
+    fun requestAudioPermissionAndStart() {
+        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    }
+    
+    // 处理语音识别结果
+    LaunchedEffect(speechState) {
+        when (val state = speechState) {
+            is SparkChainSpeechHelper.RecognitionState.Result -> {
+                if (state.isFinal && state.text.isNotBlank()) {
+                    // 识别完成，发送消息
+                    isRecording = false
+                    viewModel.sendMessage(state.text) {
+                        coroutineScope.launch {
+                            if (messages.isNotEmpty()) {
+                                listState.animateScrollToItem(messages.size - 1)
+                            }
+                        }
+                    }
+                    speechHelper.resetState()
+                }
+            }
+            is SparkChainSpeechHelper.RecognitionState.Error -> {
+                isRecording = false
+                Toast.makeText(context, "识别失败: ${state.message}", Toast.LENGTH_SHORT).show()
+                speechHelper.resetState()
+            }
+            else -> {}
+        }
+    }
+    
+    // 释放语音识别资源
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            speechHelper.destroy()
+        }
+    }
     
     // 拍照临时文件 Uri
     var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
@@ -299,6 +365,32 @@ fun AIChatContent(
         )
     }
     
+    // 录音权限解释对话框
+    if (showAudioPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showAudioPermissionDialog = false },
+            title = { Text("需要录音权限") },
+            text = { Text("语音输入功能需要使用麦克风，请授予录音权限。如果您之前拒绝了权限，可能需要在设置中手动开启。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showAudioPermissionDialog = false
+                    // 跳转到应用设置页面
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                    context.startActivity(intent)
+                }) {
+                    Text("去设置")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAudioPermissionDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+    
     // 图片选择底部菜单
     if (showImagePickerSheet) {
         ModalBottomSheet(
@@ -380,7 +472,30 @@ fun AIChatContent(
                 isOcrProcessing = isOcrProcessing,
                 isQuickAddMode = isQuickAddMode,
                 onQuickAddToggle = { isQuickAddMode = !isQuickAddMode },
-                onImageClick = { showImagePickerSheet = true }
+                onImageClick = { showImagePickerSheet = true },
+                isRecording = isRecording,
+                recordingText = when (val state = speechState) {
+                    is SparkChainSpeechHelper.RecognitionState.Result -> state.text
+                    is SparkChainSpeechHelper.RecognitionState.Listening -> "正在聆听..."
+                    else -> ""
+                },
+                speechVolume = speechVolume,
+                onVoiceStart = {
+                    if (!speechHelper.isAvailable()) {
+                        Toast.makeText(context, "语音识别未配置，请联系开发者", Toast.LENGTH_SHORT).show()
+                        return@ChatInputBar
+                    }
+                    requestAudioPermissionAndStart()
+                },
+                onVoiceEnd = {
+                    isRecording = false
+                    speechHelper.stopListening()
+                },
+                onVoiceCancel = {
+                    isRecording = false
+                    speechHelper.cancel()
+                    Toast.makeText(context, "已取消", Toast.LENGTH_SHORT).show()
+                }
             )
         }
     ) { innerPadding ->
@@ -553,8 +668,21 @@ private fun ChatInputBar(
     isOcrProcessing: Boolean = false,
     isQuickAddMode: Boolean = false,
     onQuickAddToggle: () -> Unit = {},
-    onImageClick: () -> Unit = {}
+    onImageClick: () -> Unit = {},
+    isRecording: Boolean = false,
+    recordingText: String = "",
+    speechVolume: Int = 0,
+    onVoiceStart: () -> Unit = {},
+    onVoiceEnd: () -> Unit = {},
+    onVoiceCancel: () -> Unit = {}
 ) {
+    // 语音按钮动画
+    val scale by animateFloatAsState(
+        targetValue = if (isRecording) 1.2f + (speechVolume * 0.03f) else 1f,
+        animationSpec = tween(100),
+        label = "voice_scale"
+    )
+    
     Surface(
         shadowElevation = 8.dp,
         color = MaterialTheme.colorScheme.surface
@@ -562,6 +690,33 @@ private fun ChatInputBar(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
+            // 录音状态提示
+            if (isRecording) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PrimaryBlue.copy(alpha = 0.1f))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = null,
+                        tint = PrimaryBlue,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (recordingText.isNotEmpty()) recordingText else "正在聆听...",
+                        color = PrimaryBlue,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            
             // 快速添加按钮行
             Row(
                 modifier = Modifier
@@ -653,16 +808,52 @@ private fun ChatInputBar(
                                 MaterialTheme.colorScheme.onBackground
                         ),
                         decorationBox = { innerTextField ->
-                            if (value.isEmpty() && !isOcrProcessing) {
+                            if (value.isEmpty() && !isOcrProcessing && !isRecording) {
                                 Text("输入消息...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             innerTextField()
                         }
                     )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                // 语音输入按钮
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .scale(scale)
+                        .clip(CircleShape)
+                        .background(if (isRecording) PrimaryBlue else PrimaryBlue.copy(alpha = 0.1f))
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onPress = {
+                                    // 按下开始录音
+                                    onVoiceStart()
+                                    // 等待释放
+                                    val released = tryAwaitRelease()
+                                    if (released) {
+                                        // 正常释放，发送
+                                        onVoiceEnd()
+                                    } else {
+                                        // 取消
+                                        onVoiceCancel()
+                                    }
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "语音输入",
+                        tint = if (isRecording) Color.White else PrimaryBlue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
 
-                val canSend = value.isNotBlank() && !isLoading && !isOcrProcessing
+                val canSend = value.isNotBlank() && !isLoading && !isOcrProcessing && !isRecording
                 IconButton(
                     onClick = onSend,
                     enabled = canSend,

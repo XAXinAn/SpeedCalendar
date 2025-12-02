@@ -58,6 +58,9 @@ android {
 }
 
 dependencies {
+    // 讯飞 SparkChain SDK（语音识别）
+    implementation(files("libs/SparkChain.aar"))
+    
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
