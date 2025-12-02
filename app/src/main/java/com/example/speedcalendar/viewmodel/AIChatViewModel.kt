@@ -122,13 +122,9 @@ class AIChatViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val token = getAuthToken()
-                if (token == null) {
-                    _error.value = "请先登录后再使用AI聊天功能"
-                    return@launch
-                }
+                // token 由 AuthInterceptor 自动添加
                 Log.d(TAG, "loadSessions: 发送请求")
-                val response = apiService.getChatSessions(token)
+                val response = apiService.getChatSessions()
                 val body = response.body()
                 Log.d(TAG, "loadSessions: HTTP=${response.code()}, body.code=${body?.code}")
                 
@@ -160,11 +156,7 @@ class AIChatViewModel(application: Application) : AndroidViewModel(application) 
                 _isLoading.value = true
                 _error.value = null
 
-                val token = getAuthToken()
-                if (token == null) {
-                    _error.value = "请先登录后再发送消息"
-                    return@launch
-                }
+                // token 由 AuthInterceptor 自动添加
 
                 val userMessage = Message(content = content, role = MessageRole.USER)
                 _messages.value = _messages.value + userMessage
@@ -174,7 +166,7 @@ class AIChatViewModel(application: Application) : AndroidViewModel(application) 
                     sessionId = _currentSessionId.value
                 )
 
-                val response = apiService.sendMessage(token, request)
+                val response = apiService.sendMessage(request)
 
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
@@ -221,13 +213,9 @@ class AIChatViewModel(application: Application) : AndroidViewModel(application) 
                 _isLoading.value = true
                 _error.value = null
 
-                val token = getAuthToken()
-                if (token == null) {
-                    _error.value = "请先登录后再查看聊天记录"
-                    return@launch
-                }
+                // token 由 AuthInterceptor 自动添加
 
-                val response = apiService.getChatHistory(token, sessionId)
+                val response = apiService.getChatHistory(sessionId)
 
                 if (response.isSuccessful) {
                     val apiResponse = response.body()

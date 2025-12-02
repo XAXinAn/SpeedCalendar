@@ -19,7 +19,6 @@ interface AIChatApiService {
      */
     @POST("ai/chat/message")
     suspend fun sendMessage(
-        @Header("Authorization") token: String,
         @Body request: ChatMessageRequest
     ): Response<ApiResponse<ChatMessageResponse>>
 
@@ -29,9 +28,7 @@ interface AIChatApiService {
      * 请求体: {} (空对象或不传)
      */
     @POST("ai/chat/sessions")
-    suspend fun createSession(
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<ChatSessionResponse>>
+    suspend fun createSession(): Response<ApiResponse<ChatSessionResponse>>
 
     /**
      * 获取聊天历史
@@ -40,7 +37,6 @@ interface AIChatApiService {
      */
     @GET("ai/chat/history/{sessionId}")
     suspend fun getChatHistory(
-        @Header("Authorization") token: String,
         @Path("sessionId") sessionId: String
     ): Response<ApiResponse<ChatHistoryResponse>>
 
@@ -51,9 +47,7 @@ interface AIChatApiService {
      * 响应: { code: 200, data: [{ id, title, lastMessage, timestamp }] }
      */
     @GET("ai/chat/sessions")
-    suspend fun getChatSessions(
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<List<ChatSession>>>
+    suspend fun getChatSessions(): Response<ApiResponse<List<ChatSession>>>
 
     /**
      * 删除会话
@@ -61,7 +55,6 @@ interface AIChatApiService {
      */
     @DELETE("ai/chat/sessions/{sessionId}")
     suspend fun deleteSession(
-        @Header("Authorization") token: String,
         @Path("sessionId") sessionId: String
     ): Response<ApiResponse<Unit>>
 
@@ -71,7 +64,6 @@ interface AIChatApiService {
      */
     @PUT("ai/chat/sessions/{sessionId}/title")
     suspend fun updateSessionTitle(
-        @Header("Authorization") token: String,
         @Path("sessionId") sessionId: String,
         @Body request: Map<String, String>
     ): Response<ApiResponse<ChatSessionResponse>>

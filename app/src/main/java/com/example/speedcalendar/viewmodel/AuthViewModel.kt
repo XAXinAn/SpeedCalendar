@@ -109,6 +109,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 发送验证码
      */
+    /* TODO: 暂时注释掉验证码登录功能
     fun sendVerificationCode(phone: String) {
         viewModelScope.launch {
             try {
@@ -144,10 +145,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    */
 
     /**
      * 手机号登录
      */
+    /* TODO: 暂时注释掉验证码登录功能
     fun phoneLogin(phone: String, code: String) {
         viewModelScope.launch {
             try {
@@ -198,6 +201,92 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+    */
+
+    /**
+     * 账号密码登录
+     */
+    fun login(phone: String, password: String) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _errorMessage.value = null
+
+                if (!isValidPhone(phone)) {
+                    _errorMessage.value = "手机号格式不正确"
+                    return@launch
+                }
+
+                if (password.isEmpty()) {
+                    _errorMessage.value = "请输入密码"
+                    return@launch
+                }
+
+                val request = PasswordLoginRequest(phone, password)
+                val response = authApiService.login(request)
+
+                handleLoginResponse(response)
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "登录失败", e)
+                _errorMessage.value = "网络连接失败：${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * 注册
+     */
+    fun register(phone: String, password: String) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _errorMessage.value = null
+
+                if (!isValidPhone(phone)) {
+                    _errorMessage.value = "手机号格式不正确"
+                    return@launch
+                }
+
+                if (password.length < 6) {
+                    _errorMessage.value = "密码长度至少6位"
+                    return@launch
+                }
+
+                val request = RegisterRequest(phone, password)
+                val response = authApiService.register(request)
+
+                handleLoginResponse(response)
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "注册失败", e)
+                _errorMessage.value = "网络连接失败：${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private fun handleLoginResponse(response: retrofit2.Response<ApiResponse<LoginResponse>>) {
+        if (response.isSuccessful) {
+            val apiResponse = response.body()
+            if (apiResponse != null && apiResponse.code == 200) {
+                val loginResponse = apiResponse.data
+                if (loginResponse != null) {
+                    userPreferences.saveLoginInfo(loginResponse)
+                    _userInfo.value = loginResponse.userInfo
+                    _isLoggedIn.value = true
+                    _successMessage.value = "操作成功"
+                } else {
+                    _errorMessage.value = "响应数据为空"
+                }
+            } else {
+                _errorMessage.value = apiResponse?.message ?: "操作失败"
+            }
+        } else {
+            _errorMessage.value = "网络请求失败：${response.code()}"
         }
     }
 

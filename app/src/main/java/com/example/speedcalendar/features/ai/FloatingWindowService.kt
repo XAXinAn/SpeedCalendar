@@ -257,7 +257,15 @@ class FloatingWindowService : Service() {
      * 单击：截屏 -> OCR -> AI
      */
     private fun handleSingleTap() {
-        if (isProcessing) return
+        if (isProcessing) {
+            // 如果正在处理中，点击切换显示/隐藏处理状态
+            uiState = if (uiState == FloatingUIState.Collapsed) {
+                FloatingUIState.Processing
+            } else {
+                FloatingUIState.Collapsed
+            }
+            return
+        }
         
         if (resultCode != Activity.RESULT_OK || resultData == null) {
             errorText = "截屏权限未获取，请重新点击悬浮窗按钮"
@@ -292,7 +300,7 @@ class FloatingWindowService : Service() {
      */
     private suspend fun startScreenCapture() {
         isProcessing = true
-        uiState = FloatingUIState.Processing
+        uiState = FloatingUIState.Collapsed
         resultText = ""
         errorText = ""
 
@@ -322,8 +330,12 @@ class FloatingWindowService : Service() {
 
             Log.d(TAG, "截屏成功: ${bitmap.width}x${bitmap.height}")
 
+            // TODO: 暂时跳过框选，直接将整张截图送给 OCR
             // 4. 启动裁剪界面
-            launchCropActivity(bitmap)
+            // launchCropActivity(bitmap)
+            
+            // 直接处理整张截图
+            processCroppedBitmap(bitmap)
             
         } catch (e: Exception) {
             Log.e(TAG, "截屏流程异常", e)
@@ -445,7 +457,9 @@ class FloatingWindowService : Service() {
     fun processCroppedBitmap(bitmap: Bitmap) {
         serviceScope.launch {
             try {
-                uiState = FloatingUIState.Processing
+                // 保持后台处理，不自动展开
+                uiState = FloatingUIState.Collapsed
+                isProcessing = true
                 
                 // OCR 识别
                 Log.d(TAG, "开始 OCR 识别...")
@@ -482,7 +496,6 @@ class FloatingWindowService : Service() {
             val response = withContext(Dispatchers.IO) {
                 // token 由 AuthInterceptor 自动添加
                 RetrofitClient.aiChatApiService.sendMessage(
-                    token = "", // AuthInterceptor 会自动填充
                     request = ChatMessageRequest(message = text, sessionId = null)
                 )
             }
@@ -717,19 +730,11 @@ private fun FloatingWindowContent(
                 },
             contentAlignment = Alignment.Center
         ) {
-            if (isProcessing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-            } else {
-                Icon(
-                    Icons.Default.CameraAlt, 
-                    contentDescription = "截屏识别",
-                    tint = Color.White
-                )
-            }
+            Icon(
+                Icons.Default.CameraAlt, 
+                contentDescription = "截屏识别",
+                tint = Color.White
+            )
         }
     }
 }

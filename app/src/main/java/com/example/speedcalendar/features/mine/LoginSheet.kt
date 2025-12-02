@@ -61,15 +61,18 @@ fun LoginSheet(
     onClose: () -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
+    var isRegisterMode by remember { mutableStateOf(false) }
     var phoneNumber by remember { mutableStateOf("") }
-    var verificationCode by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    // var verificationCode by remember { mutableStateOf("") } // TODO: 验证码登录
     var agreementChecked by remember { mutableStateOf(false) }
 
     val isLoading by viewModel.isLoading.collectAsState()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val successMessage by viewModel.successMessage.collectAsState()
-    val countdown by viewModel.countdown.collectAsState()
+    // val countdown by viewModel.countdown.collectAsState() // TODO: 验证码登录
 
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -99,36 +102,66 @@ fun LoginSheet(
         containerColor = Background,
         topBar = {
             TopAppBar(
-                title = { Text("手机号登录", fontWeight = FontWeight.Bold) },
+                title = { Text(if (isRegisterMode) "注册账号" else "账号登录", fontWeight = FontWeight.Bold) },
                 navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Background),
                 windowInsets = WindowInsets(0.dp)
             )
         },
         bottomBar = {
-            Button(
-                onClick = { viewModel.phoneLogin(phoneNumber, verificationCode) },
-                enabled = agreementChecked && phoneNumber.isNotBlank() && verificationCode.length == 6 && !isLoading,
-                modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                else Text("登录", fontSize = 18.sp)
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Button(
+                    onClick = {
+                        if (isRegisterMode) {
+                            if (password != confirmPassword) {
+                                Toast.makeText(context, "两次输入的密码不一致", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            viewModel.register(phoneNumber, password)
+                        } else {
+                            viewModel.login(phoneNumber, password)
+                        }
+                    },
+                    enabled = agreementChecked && phoneNumber.isNotBlank() && password.isNotBlank() && (!isRegisterMode || confirmPassword.isNotBlank()) && !isLoading,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    else Text(if (isRegisterMode) "注册" else "登录", fontSize = 18.sp)
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                TextButton(
+                    onClick = { isRegisterMode = !isRegisterMode },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isRegisterMode) "已有账号？去登录" else "没有账号？去注册")
+                }
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 24.dp)) {
             Spacer(Modifier.height(24.dp))
-            Text("欢迎回来！", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("使用手机号登录以继续", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if (isRegisterMode) "创建新账号" else "欢迎回来！", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text(if (isRegisterMode) "请填写以下信息完成注册" else "使用手机号和密码登录", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(40.dp))
 
             LoginInputItem("手机号", phoneNumber, { phoneNumber = it }, KeyboardOptions(keyboardType = KeyboardType.Phone))
             Spacer(Modifier.height(16.dp))
-            VerificationCodeInputItem(verificationCode, { verificationCode = it }, countdown, { viewModel.sendVerificationCode(phoneNumber) })
-            Spacer(Modifier.height(24.dp))
+            
+            LoginInputItem("密码", password, { password = it }, KeyboardOptions(keyboardType = KeyboardType.Password), isPassword = true)
+            Spacer(Modifier.height(16.dp))
+            
+            if (isRegisterMode) {
+                LoginInputItem("确认密码", confirmPassword, { confirmPassword = it }, KeyboardOptions(keyboardType = KeyboardType.Password), isPassword = true)
+                Spacer(Modifier.height(24.dp))
+            }
+
+            // VerificationCodeInputItem(verificationCode, { verificationCode = it }, countdown, { viewModel.sendVerificationCode(phoneNumber) }) // TODO: 验证码登录
+            // Spacer(Modifier.height(24.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(agreementChecked, { agreementChecked = it }, colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue))
@@ -139,13 +172,21 @@ fun LoginSheet(
 }
 
 @Composable
-private fun LoginInputItem(label: String, value: String, onValueChange: (String) -> Unit, keyboardOptions: KeyboardOptions) {
+private fun LoginInputItem(
+    label: String, 
+    value: String, 
+    onValueChange: (String) -> Unit, 
+    keyboardOptions: KeyboardOptions,
+    isPassword: Boolean = false
+) {
     Column {
         Text(label, fontWeight = FontWeight.Medium, modifier = Modifier.padding(bottom = 8.dp))
         BasicTextField(value, onValueChange,
             modifier = Modifier.fillMaxWidth().height(56.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 16.dp),
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
-            keyboardOptions = keyboardOptions, singleLine = true
+            keyboardOptions = keyboardOptions, 
+            singleLine = true,
+            visualTransformation = if (isPassword) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None
         )
     }
 }

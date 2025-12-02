@@ -28,6 +28,20 @@ interface AuthApiService {
     suspend fun phoneLogin(@Body request: PhoneLoginRequest): Response<ApiResponse<LoginResponse>>
 
     /**
+     * 账号密码登录
+     * POST /api/auth/login
+     */
+    @POST("auth/login")
+    suspend fun login(@Body request: PasswordLoginRequest): Response<ApiResponse<LoginResponse>>
+
+    /**
+     * 注册
+     * POST /api/auth/register
+     */
+    @POST("auth/register")
+    suspend fun register(@Body request: RegisterRequest): Response<ApiResponse<LoginResponse>>
+
+    /**
      * 更新用户信息
      * PUT /api/auth/user/{userId}
      */
