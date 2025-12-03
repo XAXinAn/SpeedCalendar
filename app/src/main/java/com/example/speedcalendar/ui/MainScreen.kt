@@ -39,6 +39,8 @@ import com.example.speedcalendar.features.group.JoinGroupScreen
 import com.example.speedcalendar.features.home.AddScheduleScreen
 import com.example.speedcalendar.features.home.EditScheduleScreen
 import com.example.speedcalendar.features.home.HomeScreen
+import com.example.speedcalendar.features.message.MessageCenterScreen
+import com.example.speedcalendar.features.message.WebViewScreen
 import com.example.speedcalendar.features.mine.MineScreen
 import com.example.speedcalendar.features.mine.settings.EditProfileScreen
 import com.example.speedcalendar.features.mine.settings.PersonalSettingsScreen
@@ -163,6 +165,9 @@ fun MainScreen(
                         onNavigateToGroupSettings = {
                             navController.navigate(Screen.GroupSettings.route)
                         },
+                        onNavigateToMessageCenter = {
+                            navController.navigate(Screen.MessageCenter.route)
+                        },
                         onLoginSuccess = onLoginSuccess,
                         viewModel = authViewModel
                     )
@@ -257,6 +262,30 @@ fun MainScreen(
                             homeViewModel = homeViewModel,
                             scheduleId = scheduleId,
                             onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+                }
+                // 消息中心
+                composable(Screen.MessageCenter.route) {
+                    MessageCenterScreen(
+                        onBack = { navController.popBackStack() },
+                        onNavigateToWebView = { url ->
+                            navController.navigate(Screen.WebViewPage.createRoute(url))
+                        }
+                    )
+                }
+                // WebView 页面
+                composable(
+                    route = Screen.WebViewPage.route,
+                    arguments = listOf(navArgument("url") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val url = backStackEntry.arguments?.getString("url")?.let {
+                        URLDecoder.decode(it, "UTF-8")
+                    }
+                    if (url != null) {
+                        WebViewScreen(
+                            url = url,
+                            onBack = { navController.popBackStack() }
                         )
                     }
                 }

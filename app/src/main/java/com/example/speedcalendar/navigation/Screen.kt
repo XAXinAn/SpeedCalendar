@@ -39,4 +39,10 @@ sealed class Screen(val route: String, val title: String) {
             return "edit_schedule/$scheduleId"
         }
     }
+    object MessageCenter : Screen("message_center", "消息中心")
+    object WebViewPage : Screen("webview/{url}", "详情") {
+        fun createRoute(url: String): String {
+            return "webview/${URLEncoder.encode(url, "UTF-8")}"
+        }
+    }
 }

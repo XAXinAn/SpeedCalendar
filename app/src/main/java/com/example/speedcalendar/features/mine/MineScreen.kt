@@ -6,6 +6,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,8 +27,10 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,23 +65,59 @@ import com.example.speedcalendar.data.model.UserInfo
 import com.example.speedcalendar.ui.theme.Background
 import com.example.speedcalendar.ui.theme.PrimaryBlue
 import com.example.speedcalendar.viewmodel.AuthViewModel
+import com.example.speedcalendar.viewmodel.MessageCenterViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MineScreen(
     onNavigateToPersonalSettings: () -> Unit = {},
     onNavigateToGroupSettings: () -> Unit = {},
+    onNavigateToMessageCenter: () -> Unit = {},
     onLoginSuccess: () -> Unit = {},  // 登录成功回调
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel = viewModel(),
+    messageCenterViewModel: MessageCenterViewModel = viewModel()
 ) {
     var showLoginSheet by remember { mutableStateOf(false) }
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val userInfo by viewModel.userInfo.collectAsState()
+    val unreadCount by messageCenterViewModel.unreadCount.collectAsState()
+
+    // 当界面可见时刷新未读数量
+    LaunchedEffect(Unit) {
+        messageCenterViewModel.fetchUnreadCount()
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("我的", fontWeight = FontWeight.Bold) },
+                actions = {
+                    // 铃铛图标
+                    Box {
+                        IconButton(onClick = onNavigateToMessageCenter) {
+                            Icon(
+                                imageVector = Icons.Outlined.Notifications,
+                                contentDescription = "消息中心",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // 未读消息角标
+                        if (unreadCount > 0) {
+                            Badge(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-4).dp, y = 4.dp),
+                                containerColor = Color.Red,
+                                contentColor = Color.White
+                            ) {
+                                Text(
+                                    text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground

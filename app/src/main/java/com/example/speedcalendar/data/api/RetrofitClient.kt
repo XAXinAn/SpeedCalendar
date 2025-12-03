@@ -113,4 +113,10 @@ object RetrofitClient {
      */
     val groupApiService: GroupApiService
         get() = getRetrofit().create(GroupApiService::class.java)
+
+    /**
+     * ActivityApiService实例
+     */
+    val activityApiService: ActivityApiService
+        get() = getRetrofit().create(ActivityApiService::class.java)
 }
