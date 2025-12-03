@@ -25,8 +25,9 @@ class TokenAuthenticator(
 
     companion object {
         private const val TAG = "TokenAuthenticator"
-        private const val BASE_URL = "http://localhost:8080/api/"
-        
+//        private const val BASE_URL = "http://localhost:8080/api/"
+        private const val BASE_URL = "http://122.51.127.61:8080/api/"
+
         // 防止无限循环刷新
         private const val MAX_RETRY_COUNT = 1
     }

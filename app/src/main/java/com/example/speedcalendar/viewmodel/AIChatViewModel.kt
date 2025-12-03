@@ -10,6 +10,7 @@ import com.example.speedcalendar.data.local.UserPreferences
 import com.example.speedcalendar.data.model.ChatMessageRequest
 import com.example.speedcalendar.features.ai.chat.Message
 import com.example.speedcalendar.features.ai.chat.MessageRole
+import com.example.speedcalendar.notification.DailyScheduleService
 import com.example.speedcalendar.utils.OcrHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,8 +28,17 @@ class AIChatViewModel(application: Application) : AndroidViewModel(application) 
 
     companion object {
         private const val TAG = "AIChatViewModel"
+        
+        // 日程相关关键词，用于检测 AI 是否操作了日程
+        private val SCHEDULE_KEYWORDS = listOf(
+            "已添加", "已创建", "添加成功", "创建成功",
+            "已修改", "已更新", "修改成功", "更新成功",
+            "已删除", "删除成功",
+            "日程", "提醒", "待办"
+        )
     }
 
+    private val context = application.applicationContext
     private val apiService = RetrofitClient.aiChatApiService
     private val userPreferences = UserPreferences.getInstance(application)
     private val ocrHelper = OcrHelper.getInstance(application)
@@ -182,6 +192,13 @@ class AIChatViewModel(application: Application) : AndroidViewModel(application) 
                             timestamp = data.timestamp
                         )
                         _messages.value = _messages.value + aiMessage
+                        
+                        // 检测 AI 回复是否涉及日程操作，如果是则刷新通知
+                        if (containsScheduleKeywords(data.message)) {
+                            Log.d(TAG, "检测到日程相关操作，刷新通知")
+                            DailyScheduleService.refreshNotification(context)
+                        }
+                        
                         onSuccess?.invoke()
                     } else {
                         _error.value = apiResponse?.message ?: "发送消息失败"
@@ -252,5 +269,12 @@ class AIChatViewModel(application: Application) : AndroidViewModel(application) 
     fun resetSession() {
         _currentSessionId.value = null
         _messages.value = emptyList()
+    }
+    
+    /**
+     * 检测文本是否包含日程相关关键词
+     */
+    private fun containsScheduleKeywords(text: String): Boolean {
+        return SCHEDULE_KEYWORDS.any { keyword -> text.contains(keyword) }
     }
 }

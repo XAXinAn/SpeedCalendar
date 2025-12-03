@@ -7,6 +7,7 @@ import com.example.speedcalendar.data.api.RetrofitClient
 import com.example.speedcalendar.data.local.UserPreferences
 import com.example.speedcalendar.data.model.AddScheduleRequest
 import com.example.speedcalendar.data.model.Schedule
+import com.example.speedcalendar.notification.DailyScheduleService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,7 @@ import java.time.format.DateTimeFormatter
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val context = application.applicationContext
     private val scheduleApiService = RetrofitClient.scheduleApiService
     private val userPreferences = UserPreferences.getInstance(application)
 
@@ -84,6 +86,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         val apiResponse = response.body()
                         if (apiResponse != null && apiResponse.code == 200 && apiResponse.data != null) {
                             _schedules.value = _schedules.value + apiResponse.data
+                            // 刷新日程通知
+                            DailyScheduleService.refreshNotification(context)
                             onSuccess()
                         } else {
                             _error.value = apiResponse?.message ?: "添加日程失败"
@@ -124,6 +128,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             _schedules.value = _schedules.value.map {
                                 if (it.scheduleId == apiResponse.data.scheduleId) apiResponse.data else it
                             }
+                            // 刷新日程通知
+                            DailyScheduleService.refreshNotification(context)
                             onSuccess()
                         } else {
                             _error.value = apiResponse?.message ?: "更新日程失败"
@@ -150,6 +156,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         val apiResponse = response.body()
                         if (apiResponse != null && apiResponse.code == 200) {
                             _schedules.value = _schedules.value.filterNot { it.scheduleId == scheduleId }
+                            // 刷新日程通知
+                            DailyScheduleService.refreshNotification(context)
                             onSuccess()
                         } else {
                             _error.value = apiResponse?.message ?: "删除日程失败"

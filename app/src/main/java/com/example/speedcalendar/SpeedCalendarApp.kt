@@ -2,6 +2,7 @@ package com.example.speedcalendar
 
 import android.app.Application
 import com.example.speedcalendar.data.api.RetrofitClient
+import com.example.speedcalendar.notification.ScheduleNotificationHelper
 
 /**
  * 应用程序入口
@@ -14,5 +15,8 @@ class SpeedCalendarApp : Application() {
         
         // 初始化RetrofitClient（用于自动Token刷新）
         RetrofitClient.init(this)
+        
+        // 创建日程通知渠道
+        ScheduleNotificationHelper.createNotificationChannel(this)
     }
 }

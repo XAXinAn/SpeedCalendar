@@ -60,7 +60,8 @@ data class BottomNavItem(
 
 @Composable
 fun MainScreen(
-    onRequestScreenCapture: () -> Unit = {}
+    onRequestScreenCapture: () -> Unit = {},
+    onLoginSuccess: () -> Unit = {}  // 登录成功回调
 ) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
@@ -162,6 +163,7 @@ fun MainScreen(
                         onNavigateToGroupSettings = {
                             navController.navigate(Screen.GroupSettings.route)
                         },
+                        onLoginSuccess = onLoginSuccess,
                         viewModel = authViewModel
                     )
                 }

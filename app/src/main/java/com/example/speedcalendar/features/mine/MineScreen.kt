@@ -66,6 +66,7 @@ import com.example.speedcalendar.viewmodel.AuthViewModel
 fun MineScreen(
     onNavigateToPersonalSettings: () -> Unit = {},
     onNavigateToGroupSettings: () -> Unit = {},
+    onLoginSuccess: () -> Unit = {},  // 登录成功回调
     viewModel: AuthViewModel = viewModel()
 ) {
     var showLoginSheet by remember { mutableStateOf(false) }
@@ -110,7 +111,11 @@ fun MineScreen(
         enter = slideInHorizontally(initialOffsetX = { it }),
         exit = slideOutHorizontally(targetOffsetX = { it })
     ) {
-        LoginSheet(onClose = { showLoginSheet = false }, viewModel = viewModel)
+        LoginSheet(
+            onClose = { showLoginSheet = false },
+            onLoginSuccess = onLoginSuccess,
+            viewModel = viewModel
+        )
     }
 }
 

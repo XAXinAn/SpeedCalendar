@@ -59,6 +59,7 @@ import com.example.speedcalendar.viewmodel.AuthViewModel
 @Composable
 fun LoginSheet(
     onClose: () -> Unit,
+    onLoginSuccess: () -> Unit = {},  // 登录成功回调
     viewModel: AuthViewModel = viewModel()
 ) {
     var isRegisterMode by remember { mutableStateOf(false) }
@@ -80,6 +81,7 @@ fun LoginSheet(
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
             Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
+            onLoginSuccess()  // 触发回调，让 Activity 处理通知权限
             onClose()
         }
     }
